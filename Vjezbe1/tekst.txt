@@ -1,0 +1,6 @@
+Ivan Ivic 42
+Ante Anic 32.5
+Ivo Ivic 30
+Juka Jukic 0
+Bob Bobic 50
+Jur Juric 10
