@@ -36,53 +36,42 @@ int printList(Position head);
 int addToBack(Position head, char* name, char* surname, int birthYear);
 int findPersonBySurname(Position head, char* surname);
 int deletePersonBySurname(Position head, char* surname);
-
+int freeList(Position head);
 
 int main()
 {
+
 	Person head = { 0 };
 	Position headP = &head;
 
 	int status = 0;
 
-	status = addToFront(headP, "Jako", "Dobro", 2000);
-	if (status < 0) return status;
-	status = addToFront(headP, "Vrlo", "Dobro", 3000);
-	if (status < 0) return status;
-	status = addToBack(headP, "Vrlo", "Lose", 2000);
-	if (status < 0) return status;
+	if ((status = addToFront(headP, "Jako", "Dobro", 2000)) < 0) return status;
+	if ((status = addToFront(headP, "Vrlo", "Dobro", 3000)) < 0) return status;
+	if ((status = addToBack(headP, "Vrlo", "Lose", 2000)) < 0) return status;
 
 	printf("TEST 1: \n");
-	status = printList(headP);
-	if (status < 0) return status;
+	
+	if ((status = printList(headP)) < 0) return status;
 
-	status = addToFront(headP, "iv", "ivic", 1000);
-	if (status < 0) return status;
-	status = addToBack(headP, "Dobro", "Lose", 2000);
-	if (status < 0) return status;
+	if ((status = addToFront(headP, "iv", "ivic", 1000)) < 0) return status;
+	if ((status = addToBack(headP, "Dobro", "Lose", 2000)) < 0) return status;
 
 	printf("TEST 2: \n");
-	status = printList(headP);
-	if (status < 0) return status;
 
-	status = findPersonBySurname(headP, "Lose");
-	if (status < 0) return status;
-
-	status = deletePersonBySurname(headP, "Dobro");
-	if (status < 0) return status;
+	if ((status = printList(headP)) < 0) return status;
+	if ((status = findPersonBySurname(headP, "Lose")) < 0) return status;
+	if ((status = deletePersonBySurname(headP, "Dobro")) < 0) return status;
 
 	printf("Izbrisano prezime Dobro: \n");
-	status = printList(headP);
-	if (status < 0) return status;
 
-	status = deletePersonBySurname(headP, "Lose");
-	if (status < 0) return status;
+	if ((status = printList(headP)) < 0) return status;
+	if ((status = deletePersonBySurname(headP, "Lose")) < 0) return status;
 
 	printf("Izbrisano prezime Lose: \n");
-	status = printList(headP);
-	if (status < 0) return status;
+	if ((status = printList(headP)) < 0) return status;
 
-	
+	if ((status = freeList(headP)) < 0) return status;
 }
 
 // Alocira memoriju i stavlja podatke u newPerson
@@ -115,7 +104,8 @@ int insertPosition(Position pos1, Position pos2)
 // Pripaja element na pocetak vezane liste
 int addToFront(Position head, char* name, char* surname, int birthYear)
 {
-	if (head == NULL || name == NULL || surname == NULL || birthYear == 0)
+
+	if (head == NULL || name == NULL || surname == NULL)
 	{
 		printf("Greska u argumentima!(addToFront)");
 		return ARG_ERR;
@@ -137,6 +127,7 @@ int addToFront(Position head, char* name, char* surname, int birthYear)
 // Ispisuje sve elemente vezanog liste u obliku |ime|prezime|godina|
 int printList(Position head)
 {
+
 	if (head == NULL)
 	{
 		printf("Greska u argumentima! (printList)");
@@ -158,7 +149,7 @@ int printList(Position head)
 int addToBack(Position head, char* name, char* surname, int birthYear)
 {
 
-	if (head == NULL || name == NULL || surname == NULL || birthYear == 0)
+	if (head == NULL || name == NULL || surname == NULL)
 	{
 		printf("Greska u argumentima! (addToBack)");
 		return ARG_ERR;
@@ -186,6 +177,7 @@ int addToBack(Position head, char* name, char* surname, int birthYear)
 // Trazi i ispisuje sve elemente vezane liste sa trazenim prezimenom
 int findPersonBySurname(Position head, char* surname)
 {
+
 	if (head == NULL || surname == NULL)
 	{
 		printf("Greska u arugmentima! (findPersonBySurname)");
@@ -197,22 +189,22 @@ int findPersonBySurname(Position head, char* surname)
 
 	int matches = 0;
 	Position* foundMatching = NULL;
-	Position* temp = NULL;
+	Position* newFound = NULL;
 
 	while (search != NULL)
 	{
 		if (strcmp(search->surname, surname) == 0)
 		{
 			matches++;
-			temp = (Position*)realloc(foundMatching, matches * sizeof(Position));
+			newFound = (Position*)realloc(foundMatching, matches * sizeof(Position));
 
-			if (temp == NULL)
+			if (newFound == NULL)
 			{
 				printf("Greska pri alokaciji memorije! (findPersonBySurame)");
 				free(foundMatching);
 				return MEMORY_ALLOC_ERR;
 			}
-			foundMatching = temp;
+			foundMatching = newFound;
 			foundMatching[matches - 1] = search;
 		}
 		search = search->next;
@@ -235,6 +227,7 @@ int findPersonBySurname(Position head, char* surname)
 // Odspaja i brise sve elemente sa odredenim prezimenom iz vezane liste
 int deletePersonBySurname(Position head, char* surname)
 {
+
 	if (head == NULL || surname == NULL)
 	{
 		printf("Greska u argumentima! (deletePersonBySurname)");
@@ -268,6 +261,32 @@ int deletePersonBySurname(Position head, char* surname)
 	{
 		printf("Nije pronaden niti jedan element sa prezimenom: %s za izbrisati", surname);
 	}
+
+	return 0;
+}
+
+// Cisti memoriju koju je lista zauzimala / brise sve clanove liste
+int freeList(Position head)
+{
+	if (head == NULL)
+	{
+		printf("Greska s argumentima! (freeList)");
+		return ARG_ERR;
+	}
+
+	Position current = NULL,
+		next = NULL;
+
+	next = head->next;
+
+	while(next != NULL)
+	{
+		current = next;
+		next = current->next;
+		free(current);
+	}
+
+	head->next = NULL;
 
 	return 0;
 }
