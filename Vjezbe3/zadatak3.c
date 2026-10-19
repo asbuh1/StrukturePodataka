@@ -1,4 +1,4 @@
-﻿/* NEDOVRSENO
+/* NEDOVRSENO
 2. Definirati strukturu osoba (ime, prezime, godina rođenja) i napisati program koji:
 A. dinamički dodaje novi element na početak liste,
 B. ispisuje listu,
@@ -21,9 +21,12 @@ E. čita listu iz datoteke.
 #include <string.h>
 
 #define MAX_LENGTH 50
+#define MAX_BUFFER 1024
 
 #define MEMORY_ALLOC_ERR (-1)
 #define ARG_ERR (-2)
+#define PERSON_NOT_FOUND_ERR (-3)
+#define FILE_ERR (-4)
 
 struct _Person;
 typedef struct _Person* Position;
@@ -35,87 +38,23 @@ typedef struct _Person
 	Position next;
 }Person;
 
-
 Position createPerson(char* name, char* surname, int birthYear);
 int insertPosition(Position pos1, Position pos2);
 int addToFront(Position head, char* name, char* surname, int birthYear);
 int printList(Position head);
 int addToBack(Position head, char* name, char* surname, int birthYear);
-int findPersonBySurname(Position head, char* surname);
+Position* findPersonBySurname(Position head, char* surname);
 int deletePersonBySurname(Position head, char* surname);
 int freeList(Position head);
 
+int addBehind(Position head, char* findSurname, char* name, char* surname, int birthYear);
+int addInFront(Position head, char* findSurname, char* name, char* surname, int birthYear);
+int sortListInsertion(Position head);
+int sortListBubble(Position head);
+int createFileFromList(Position head, char* filename);
+int readListFromFile(Position head, char* filename);
 
-int addBehind(Position head, char* findSurname, char* name, char* surname, int birthYear)
-{
-	Position curr = NULL, prev = NULL;
-	curr = head->next;
-	while (strcmp(curr->surname, findSurname) != 0)
-	{
-		curr = curr->next;
-	}
-
-	Position novi = NULL;
-	novi = createPerson(name, surname, birthYear);
-	novi->next = curr->next;
-	curr->next = novi;
-
-	return 0;
-
-}
-
-int addInFront(Position head, char* findSurname, char* name, char* surname, int birthYear)
-{
-	Position curr = NULL, prev = NULL;
-	curr = head->next, prev = head;
-	while (strcmp(curr->surname, findSurname) != 0)
-	{
-		prev = curr;
-		curr = curr->next;
-	}
-
-	Position novi = NULL;
-	novi = createPerson(name, surname, birthYear);
-	novi->next = curr;
-	prev->next = novi;
-
-	return 0;
-
-}
-
-int sortListInsertion(Position head)
-{
-	Position curr = NULL, next = NULL;
-
-	curr = head->next;
-	head->next = NULL;
-
-	while(curr != NULL)
-	{
-		next = curr->next;
-		
-		Position temp = NULL;
-		temp = head;
-		while (temp->next != NULL && strcmp(temp->next->surname, curr->surname) < 0) temp = temp->next;
-		insertPosition(temp, curr);
-
-		curr = next;
-	}
-	return 0;
-}
-/* NEDOVRSENO
-int sortListBubble(Position head)
-{
-	Position end = NULL;
-	for(Position curr = head; curr->next != NULL; curr = curr->next)
-	{
-	for(Position test = head; test->next != end; test = test->next)
-	{
-	
-	}
-
-	}
-} */
+Position selectPerson(Position head, char* surname);
 
 int main()
 {
@@ -125,41 +64,26 @@ int main()
 
 	int status = 0;
 
-	if ((status = addToFront(headP, "Jako", "Dobro", 2000)) < 0) return status;
-	if ((status = addToFront(headP, "Vrlo", "Dobro", 3000)) < 0) return status;
-	if ((status = addToBack(headP, "Vrlo", "Lose", 2000)) < 0) return status;
-
-	printf("TEST 1: \n");
-
-	if ((status = printList(headP)) < 0) return status;
-
-	if ((status = addToFront(headP, "Kam", "Kameni", 1000)) < 0) return status;
-	if ((status = addToBack(headP, "Dobro", "Lose", 2000)) < 0) return status;
-
-	printf("TEST 2: \n");
-
-	if ((status = printList(headP)) < 0) return status;
-	if ((status = findPersonBySurname(headP, "Lose")) < 0) return status;
-	if ((status = deletePersonBySurname(headP, "Dobro")) < 0) return status;
-
-	printf("Izbrisano prezime Dobro: \n");
-
-	if ((status = printList(headP)) < 0) return status;
-	if ((status = deletePersonBySurname(headP, "Lose")) < 0) return status;
-
-	printf("Izbrisano prezime Lose: \n");
-	if ((status = printList(headP)) < 0) return status;
-
-	addToFront(headP, "zak", "Zakic", 1000);
-	printf("LOB \n");
-	addBehind(headP, "Zakic", "Jak", "Jakic", 3000);
-	addInFront(headP, "Zakic", "Jon", "Jonas", 2000);
+	if((status = readListFromFile(headP, "Jagoda.txt")) < 0) return status;
+	
 	printList(headP);
-	printf("TESTING \n");
-	sortList(headP);
+	if ((status = addBehind(headP, "Zakic", "Joza", "Enic", 1000)) < 0) return status;
+	
+	printf("TEST2 \n");
+
 	printList(headP);
 
-	if ((status = freeList(headP)) < 0) return status;
+	printf("TEST3 \n");
+	if ((status = addInFront(headP, "Anic", "Jakov", "Jakovic", 3000)) < 0) return status;
+	printList(headP);
+	printf("SORTIRANO\n");
+	if ((status = sortListBubble(headP) ) < 0) return status;
+	
+	printList(headP);
+
+	if ((status = createFileFromList(headP, "Jabuka.txt")) < 0) return status;
+	freeList(headP);
+
 }
 
 // Alocira memoriju i stavlja podatke u newPerson
@@ -233,6 +157,7 @@ int printList(Position head)
 
 	return 0;
 }
+
 // Pripaja element na kraj vezane liste
 int addToBack(Position head, char* name, char* surname, int birthYear)
 {
@@ -262,14 +187,15 @@ int addToBack(Position head, char* name, char* surname, int birthYear)
 
 	return 0;
 }
-// Trazi i ispisuje sve elemente vezane liste sa trazenim prezimenom
-int findPersonBySurname(Position head, char* surname)
+
+// Trazi i ispisuje sve elemente vezane liste sa trazenim prezimenom te vraca listu sa svim pronadenim elementima
+Position* findPersonBySurname(Position head, char* surname)
 {
 
 	if (head == NULL || surname == NULL)
 	{
 		printf("Greska u arugmentima! (findPersonBySurname)");
-		return ARG_ERR;
+		return NULL;
 	}
 
 	Position search = NULL;
@@ -290,7 +216,7 @@ int findPersonBySurname(Position head, char* surname)
 			{
 				printf("Greska pri alokaciji memorije! (findPersonBySurame)");
 				free(foundMatching);
-				return MEMORY_ALLOC_ERR;
+				return NULL;
 			}
 			foundMatching = newFound;
 			foundMatching[matches - 1] = search;
@@ -307,10 +233,9 @@ int findPersonBySurname(Position head, char* surname)
 			printf("%d.|%s|%s|%d|\n", i + 1, foundMatching[i]->name, foundMatching[i]->surname, foundMatching[i]->birthYear);
 		}
 	}
-	free(foundMatching);
-	return 0;
+	
+	return foundMatching;
 }
-
 
 // Odspaja i brise sve elemente sa odredenim prezimenom iz vezane liste
 int deletePersonBySurname(Position head, char* surname)
@@ -350,6 +275,210 @@ int deletePersonBySurname(Position head, char* surname)
 		printf("Nije pronaden niti jedan element sa prezimenom: %s za izbrisati", surname);
 	}
 
+	return 0;
+}
+
+// Pomocna funkcija za addBehind i addInFront, iz pronadenih prezimena sa findPersonBySurname vraca jedno
+Position selectPerson(Position head, char* findSurname)
+{
+	if (head == NULL || findSurname == NULL)
+	{
+		printf("Greska u argumentima! (selectPerson)");
+		return NULL;
+	}
+
+	Position curr = NULL;
+	Position* found = NULL;
+	if ((found = findPersonBySurname(head, findSurname)) == NULL) return NULL;
+
+	printf("Odaberite clana: ");
+	int choice = 0;
+	scanf("%d", &choice);
+
+	curr = found[choice - 1];
+	free(found);
+	return curr;
+}
+
+// Spaja novi clan u listi iza
+int addBehind(Position head, char* findSurname, char* name, char* surname, int birthYear)
+{
+	if (head == NULL || findSurname == NULL || name == NULL || surname == NULL)
+	{
+		printf("Greska u argumentima! (addBehind)");
+		return ARG_ERR;
+	}
+
+	Position curr = NULL;
+	Position novi = NULL;
+
+	if ((curr = selectPerson(head, findSurname)) == NULL) return PERSON_NOT_FOUND_ERR;
+	if ((novi = createPerson(name, surname, birthYear)) == NULL) 
+	{
+		printf("Greska pri alokacijig novog clana! (addBehind)");
+		return MEMORY_ALLOC_ERR;
+	};
+	
+	
+	insertPosition(curr, novi);
+	return 0;
+
+}
+
+// Spaja novi clan u listu ispred trazenog
+int addInFront(Position head, char* findSurname, char* name, char* surname, int birthYear)
+{
+
+	if (head == NULL || findSurname == NULL || name == NULL || surname == NULL)
+	{
+		printf("Greska u argumentima! (addBehind)");
+		return ARG_ERR;
+	}
+
+	Position curr = NULL, prev = NULL;
+
+	if ((curr = selectPerson(head, findSurname)) == NULL) return PERSON_NOT_FOUND_ERR;
+
+	// D:
+	for (prev = head; prev->next != curr; prev = prev->next);
+
+
+	Position novi = NULL;
+
+	if ((novi = createPerson(name, surname, birthYear)) == NULL)
+	{
+		printf("Greska pri alokacijig novog clana! (addBehind)");
+		return MEMORY_ALLOC_ERR;
+	};
+
+	novi->next = curr;
+	prev->next = novi;
+
+	return 0;
+}
+
+// Insertion sort za vezanu listu
+int sortListInsertion(Position head)
+{
+	if (head == NULL)
+	{
+		printf("Greska s argumentima! (sortListBubble)");
+		return ARG_ERR;
+	}
+
+	Position curr = NULL, next = NULL;
+
+	curr = head->next;
+	head->next = NULL;
+
+	while (curr != NULL)
+	{
+		next = curr->next;
+
+		Position temp = NULL;
+		temp = head;
+		while (temp->next != NULL && strcmp(temp->next->surname, curr->surname) < 0) temp = temp->next;
+		insertPosition(temp, curr);
+
+		curr = next;
+	}
+	return 0;
+}
+
+// Bubble sort za vezanu listu
+int sortListBubble(Position head)
+{
+	if (head == NULL)
+	{
+		printf("Greska s argumentima! (sortListBubble)");
+		return ARG_ERR;
+	}
+
+	Position prevElement = NULL, currElement = NULL, end = NULL;
+	Position current = head;
+	while(current->next != end)
+	{
+		prevElement = current;
+		currElement = current->next;
+
+		while(currElement->next != end)
+		{
+		if(strcmp(currElement->surname, currElement->next->surname) > 0 )
+		{
+			Position temp = NULL;
+			
+			temp = currElement->next;
+			currElement->next = temp->next;
+			temp->next = currElement;
+			prevElement->next = temp;
+
+			currElement = temp;
+		}
+		prevElement = currElement;
+		currElement = currElement->next;
+		}
+		end = currElement;
+	}
+	return 0;
+}
+
+// Stvara i upsije podatke iz liste u file
+int createFileFromList(Position head, char* filename)
+{
+	if(head == NULL || filename == NULL)
+	{
+		printf("Greska s argumentama(createFileFromList)!");
+		return ARG_ERR;
+	}
+
+	FILE* file = fopen(filename, "w");
+
+	if (file == NULL)
+	{
+		printf("Greska sa fileom!(createFileFromList)");
+		return FILE_ERR;
+	}
+	
+	fprintf(file, "IME PREZIME GODINA RODENJA\n");
+	Position start = NULL;
+	for (start = head->next; start != NULL; start = start->next)
+	{
+		fprintf(file, "%s %s %d\n", start->name, start->surname, start->birthYear);
+	}
+	fclose(file);
+	return 0;
+}
+
+// Stvara/Cita vezanu listu iz filea
+int readListFromFile(Position head, char* filename)
+{
+	if (head == NULL || filename == NULL)
+	{
+		printf("Greska s argumentama(readListFromFile)!");
+		return ARG_ERR;
+	}
+
+	FILE* file = fopen(filename, "r");
+
+	if (file == NULL)
+	{
+		printf("Greska pri otvaranju filea!(readListFromFile)");
+		return FILE_ERR;
+	}
+
+	char buffer[MAX_BUFFER];
+
+	fgets(buffer, MAX_BUFFER, file);
+
+	char name[MAX_LENGTH] = { 0 }, surname[MAX_LENGTH] = { 0 };
+	int birthYear = 0;
+
+	while (fscanf(file, "%s %s %d", name, surname, &birthYear) > 0)
+	{
+		addToBack(head, name, surname, birthYear);
+	}
+
+	fclose(file);
 	return 0;
 }
 
