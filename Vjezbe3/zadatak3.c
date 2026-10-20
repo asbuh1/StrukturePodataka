@@ -1,4 +1,4 @@
-/* NEDOVRSENO
+/*
 2. Definirati strukturu osoba (ime, prezime, godina rođenja) i napisati program koji:
 A. dinamički dodaje novi element na početak liste,
 B. ispisuje listu,
@@ -64,11 +64,11 @@ int main()
 
 	int status = 0;
 
-	if((status = readListFromFile(headP, "Jagoda.txt")) < 0) return status;
-	
+	if ((status = readListFromFile(headP, "Jagoda.txt")) < 0) return status;
+
 	printList(headP);
 	if ((status = addBehind(headP, "Zakic", "Joza", "Enic", 1000)) < 0) return status;
-	
+
 	printf("TEST2 \n");
 
 	printList(headP);
@@ -77,8 +77,8 @@ int main()
 	if ((status = addInFront(headP, "Anic", "Jakov", "Jakovic", 3000)) < 0) return status;
 	printList(headP);
 	printf("SORTIRANO\n");
-	if ((status = sortListBubble(headP) ) < 0) return status;
-	
+	if ((status = sortListBubble(headP)) < 0) return status;
+
 	printList(headP);
 
 	if ((status = createFileFromList(headP, "Jabuka.txt")) < 0) return status;
@@ -233,7 +233,7 @@ Position* findPersonBySurname(Position head, char* surname)
 			printf("%d.|%s|%s|%d|\n", i + 1, foundMatching[i]->name, foundMatching[i]->surname, foundMatching[i]->birthYear);
 		}
 	}
-	
+
 	return foundMatching;
 }
 
@@ -294,7 +294,6 @@ Position selectPerson(Position head, char* findSurname)
 	printf("Odaberite clana: ");
 	int choice = 0;
 	scanf("%d", &choice);
-
 	curr = found[choice - 1];
 	free(found);
 	return curr;
@@ -313,13 +312,13 @@ int addBehind(Position head, char* findSurname, char* name, char* surname, int b
 	Position novi = NULL;
 
 	if ((curr = selectPerson(head, findSurname)) == NULL) return PERSON_NOT_FOUND_ERR;
-	if ((novi = createPerson(name, surname, birthYear)) == NULL) 
+	if ((novi = createPerson(name, surname, birthYear)) == NULL)
 	{
 		printf("Greska pri alokacijig novog clana! (addBehind)");
 		return MEMORY_ALLOC_ERR;
 	};
-	
-	
+
+
 	insertPosition(curr, novi);
 	return 0;
 
@@ -396,26 +395,26 @@ int sortListBubble(Position head)
 
 	Position prevElement = NULL, currElement = NULL, end = NULL;
 	Position current = head;
-	while(current->next != end)
+	while (current->next != end)
 	{
 		prevElement = current;
 		currElement = current->next;
 
-		while(currElement->next != end)
+		while (currElement->next != end)
 		{
-		if(strcmp(currElement->surname, currElement->next->surname) > 0 )
-		{
-			Position temp = NULL;
-			
-			temp = currElement->next;
-			currElement->next = temp->next;
-			temp->next = currElement;
-			prevElement->next = temp;
+			if (strcmp(currElement->surname, currElement->next->surname) > 0)
+			{
+				Position temp = NULL;
 
-			currElement = temp;
-		}
-		prevElement = currElement;
-		currElement = currElement->next;
+				temp = currElement->next;
+				currElement->next = temp->next;
+				temp->next = currElement;
+				prevElement->next = temp;
+
+				currElement = temp;
+			}
+			prevElement = currElement;
+			currElement = currElement->next;
 		}
 		end = currElement;
 	}
@@ -425,7 +424,7 @@ int sortListBubble(Position head)
 // Stvara i upsije podatke iz liste u file
 int createFileFromList(Position head, char* filename)
 {
-	if(head == NULL || filename == NULL)
+	if (head == NULL || filename == NULL)
 	{
 		printf("Greska s argumentama(createFileFromList)!");
 		return ARG_ERR;
@@ -438,7 +437,7 @@ int createFileFromList(Position head, char* filename)
 		printf("Greska sa fileom!(createFileFromList)");
 		return FILE_ERR;
 	}
-	
+
 	fprintf(file, "IME PREZIME GODINA RODENJA\n");
 	Position start = NULL;
 	for (start = head->next; start != NULL; start = start->next)
@@ -466,7 +465,7 @@ int readListFromFile(Position head, char* filename)
 		return FILE_ERR;
 	}
 
-	char buffer[MAX_BUFFER];
+	char buffer[MAX_BUFFER] = { 0 };
 
 	fgets(buffer, MAX_BUFFER, file);
 
