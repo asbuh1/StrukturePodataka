@@ -14,6 +14,7 @@ C. sortira listu po prezimenima osoba,
 D. upisuje listu u datoteku,
 E. čita listu iz datoteke.
 */
+
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <stdio.h>
@@ -43,17 +44,15 @@ int insertPosition(Position pos1, Position pos2);
 int addToFront(Position head, char* name, char* surname, int birthYear);
 int printList(Position head);
 int addToBack(Position head, char* name, char* surname, int birthYear);
-Position* findPersonBySurname(Position head, char* surname);
+Position* findPersonBySurname(Position head, char* surname, int* matches);
 int deletePersonBySurname(Position head, char* surname);
 int freeList(Position head);
 
 int addBehind(Position head, char* findSurname, char* name, char* surname, int birthYear);
 int addInFront(Position head, char* findSurname, char* name, char* surname, int birthYear);
-int sortListInsertion(Position head);
-int sortListBubble(Position head);
+int bubbleSort(Position head);
 int createFileFromList(Position head, char* filename);
 int readListFromFile(Position head, char* filename);
-
 Position selectPerson(Position head, char* surname);
 
 int main()
@@ -77,8 +76,8 @@ int main()
 	if ((status = addInFront(headP, "Anic", "Jakov", "Jakovic", 3000)) < 0) return status;
 	printList(headP);
 	printf("SORTIRANO\n");
-	if ((status = sortListBubble(headP)) < 0) return status;
 
+	if((status = bubbleSort(headP)) < 0) return status;
 	printList(headP);
 
 	if ((status = createFileFromList(headP, "Jabuka.txt")) < 0) return status;
@@ -90,15 +89,14 @@ int main()
 Position createPerson(char* name, char* surname, int birthYear)
 {
 
-	Position newPerson = NULL;
-	newPerson = (Position)malloc(sizeof(Person));
+	Position newPerson = (Position)malloc(sizeof(Person));
 
 	if (newPerson == NULL) return NULL;
 
 	strcpy(newPerson->name, name);
 	strcpy(newPerson->surname, surname);
-	newPerson->birthYear = birthYear;
 
+	newPerson->birthYear = birthYear;
 	newPerson->next = NULL;
 
 	return newPerson;
@@ -146,8 +144,7 @@ int printList(Position head)
 		return ARG_ERR;
 	}
 
-	Position printPosition = NULL;
-	printPosition = head->next;
+	Position printPosition = head->next;
 
 	while (printPosition != NULL)
 	{
@@ -176,8 +173,8 @@ int addToBack(Position head, char* name, char* surname, int birthYear)
 		return MEMORY_ALLOC_ERR;
 	}
 
-	Position lastPosition = NULL;
-	lastPosition = head;
+	Position lastPosition = head;
+	
 	while (lastPosition->next != NULL)
 	{
 		lastPosition = lastPosition->next;
@@ -189,28 +186,28 @@ int addToBack(Position head, char* name, char* surname, int birthYear)
 }
 
 // Trazi i ispisuje sve elemente vezane liste sa trazenim prezimenom te vraca listu sa svim pronadenim elementima
-Position* findPersonBySurname(Position head, char* surname)
+Position* findPersonBySurname(Position head, char* surname, int* matches)
 {
 
-	if (head == NULL || surname == NULL)
+	if (head == NULL || surname == NULL || matches == NULL)
 	{
 		printf("Greska u arugmentima! (findPersonBySurname)");
 		return NULL;
 	}
+	
+	*matches = 0;
+	int foundMatches = *matches;
 
-	Position search = NULL;
-	search = head->next;
-
-	int matches = 0;
+	Position search = head->next;
+	
 	Position* foundMatching = NULL;
-	Position* newFound = NULL;
 
 	while (search != NULL)
 	{
 		if (strcmp(search->surname, surname) == 0)
 		{
-			matches++;
-			newFound = (Position*)realloc(foundMatching, matches * sizeof(Position));
+			foundMatches++;
+			Position* newFound = (Position*)realloc(foundMatching, foundMatches * sizeof(Position));
 
 			if (newFound == NULL)
 			{
@@ -218,22 +215,24 @@ Position* findPersonBySurname(Position head, char* surname)
 				free(foundMatching);
 				return NULL;
 			}
+
 			foundMatching = newFound;
-			foundMatching[matches - 1] = search;
+			foundMatching[foundMatches - 1] = search;
 		}
 		search = search->next;
 	}
 
-	if (matches == 0) printf("Nije pronadeno niti jedno prezime: %s u listi!", surname);
-	else
+	if (foundMatches == 0) printf("Nije pronadeno niti jedno prezime: %s u listi!", surname);
+	else if (foundMatches > 1)
 	{
 		printf("Pronadeno: \n");
-		for (int i = 0; i < matches; i++)
+		for (int i = 0; i < foundMatches; i++)
 		{
 			printf("%d.|%s|%s|%d|\n", i + 1, foundMatching[i]->name, foundMatching[i]->surname, foundMatching[i]->birthYear);
 		}
 	}
 
+	*matches = foundMatches;
 	return foundMatching;
 }
 
@@ -247,13 +246,10 @@ int deletePersonBySurname(Position head, char* surname)
 		return ARG_ERR;
 	}
 
-	Position current = NULL,
-		previous = NULL;
 	int deletedCount = 0;
 
-	current = head->next;
-	previous = head;
-
+	Position current = head->next, previous = head;
+	
 	while (current != NULL)
 	{
 		if (strcmp(current->surname, surname) == 0)
@@ -287,16 +283,31 @@ Position selectPerson(Position head, char* findSurname)
 		return NULL;
 	}
 
-	Position curr = NULL;
 	Position* found = NULL;
-	if ((found = findPersonBySurname(head, findSurname)) == NULL) return NULL;
+	int matches = 0;
+	if ((found = findPersonBySurname(head, findSurname, &matches)) == NULL) return NULL;
+	else if (matches > 1)
+	{
+		while (1)
+		{
+			printf("Odaberite clana: ");
 
-	printf("Odaberite clana: ");
-	int choice = 0;
-	scanf("%d", &choice);
-	curr = found[choice - 1];
+			int choice = 0;
+
+			scanf("%d", &choice);
+
+			if (choice > 0 && choice <= matches)
+			{
+
+				matches = choice;
+				break;
+			}
+			printf("Unesite tocan broj!\n");
+		}
+	}
+	Position picked = found[matches - 1];
 	free(found);
-	return curr;
+	return picked;
 }
 
 // Spaja novi clan u listi iza
@@ -308,16 +319,14 @@ int addBehind(Position head, char* findSurname, char* name, char* surname, int b
 		return ARG_ERR;
 	}
 
-	Position curr = NULL;
-	Position novi = NULL;
-
-	if ((curr = selectPerson(head, findSurname)) == NULL) return PERSON_NOT_FOUND_ERR;
+	Position curr = selectPerson(head, findSurname), novi = NULL;
+	
+	if (curr == NULL) return PERSON_NOT_FOUND_ERR;
 	if ((novi = createPerson(name, surname, birthYear)) == NULL)
 	{
 		printf("Greska pri alokacijig novog clana! (addBehind)");
 		return MEMORY_ALLOC_ERR;
 	};
-
 
 	insertPosition(curr, novi);
 	return 0;
@@ -338,9 +347,7 @@ int addInFront(Position head, char* findSurname, char* name, char* surname, int 
 
 	if ((curr = selectPerson(head, findSurname)) == NULL) return PERSON_NOT_FOUND_ERR;
 
-	// D:
 	for (prev = head; prev->next != curr; prev = prev->next);
-
 
 	Position novi = NULL;
 
@@ -356,67 +363,36 @@ int addInFront(Position head, char* findSurname, char* name, char* surname, int 
 	return 0;
 }
 
-// Insertion sort za vezanu listu
-int sortListInsertion(Position head)
+// Bubble sort 
+int bubbleSort(Position head)
 {
 	if (head == NULL)
 	{
-		printf("Greska s argumentima! (sortListBubble)");
+		printf("Greska s argumentima (bubbleSort)");
 		return ARG_ERR;
 	}
 
-	Position curr = NULL, next = NULL;
+	Position end = NULL, loop = head;
 
-	curr = head->next;
-	head->next = NULL;
-
-	while (curr != NULL)
+	while (loop->next != end)
 	{
-		next = curr->next;
+		Position prev = loop, curr = loop->next;
 
-		Position temp = NULL;
-		temp = head;
-		while (temp->next != NULL && strcmp(temp->next->surname, curr->surname) < 0) temp = temp->next;
-		insertPosition(temp, curr);
-
-		curr = next;
-	}
-	return 0;
-}
-
-// Bubble sort za vezanu listu
-int sortListBubble(Position head)
-{
-	if (head == NULL)
-	{
-		printf("Greska s argumentima! (sortListBubble)");
-		return ARG_ERR;
-	}
-
-	Position prevElement = NULL, currElement = NULL, end = NULL;
-	Position current = head;
-	while (current->next != end)
-	{
-		prevElement = current;
-		currElement = current->next;
-
-		while (currElement->next != end)
+		while (curr->next != end)
 		{
-			if (strcmp(currElement->surname, currElement->next->surname) > 0)
+			if (strcmp(curr->surname, curr->next->surname) > 0)
 			{
-				Position temp = NULL;
+				Position temp = curr->next;
+				curr->next = temp->next;
+				temp->next = curr;
+				prev->next = temp;
 
-				temp = currElement->next;
-				currElement->next = temp->next;
-				temp->next = currElement;
-				prevElement->next = temp;
-
-				currElement = temp;
+				curr = temp;
 			}
-			prevElement = currElement;
-			currElement = currElement->next;
+			prev = curr;
+			curr = curr->next;
 		}
-		end = currElement;
+		end = curr;
 	}
 	return 0;
 }
@@ -490,10 +466,7 @@ int freeList(Position head)
 		return ARG_ERR;
 	}
 
-	Position current = NULL,
-		next = NULL;
-
-	next = head->next;
+	Position current = NULL, next = head->next;
 
 	while (next != NULL)
 	{
