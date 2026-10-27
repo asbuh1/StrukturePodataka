@@ -27,20 +27,38 @@ int polinomBuilder(Position head, int eksponent, int koeficijent);
 int kopirajPolinom(Position headRez, Position polHEAD);
 int zbrojiPolinom(Position pol1, Position pol2, Position headRez);
 int mnoziPolinom(Position pol1, Position pol2, Position headRez);
-Position* readPolinom(char* filename);
-
-
+Position* readPolinom(char* filename, int* sizeP);
+Position selectPolinom(char* filename);
+int freeList(Position head);
 
 int main()
 {
 	Polinom head = { 0 };
 	Position headP = &head;
 
-	Position* polnymos = NULL;
+	Position polnymos1 = NULL;
 
-	polnymos = readPolinom("polinom.txt");
+	polnymos1 = selectPolinom("polinom.txt");
 	
-	printPolinom(polnymos[1]);
+	printf("Odabir 2.:\n");
+
+	Position polynoms2 = selectPolinom("polinom.txt");
+
+	Polinom rez = { 0 };
+	Position rezP = &rez;
+
+	mnoziPolinom(polnymos1, polynoms2, rezP);
+
+	printf("Rezultat mnozenja!: \n");
+	printPolinom(rezP);
+
+	Polinom rez2 = { 0 };
+	Position rezP2 = &rez2;
+
+	zbrojiPolinom(polnymos1, polynoms2, rezP2);
+
+	printf("\nRezultat zbrajanja!: \n");
+	printPolinom(rezP2);
 
 }
 
@@ -67,9 +85,24 @@ int printPolinom(Position head)
 {
 
 	Position curr = head->next;
+
+	printf("%dx^%d", curr->koeficijent, curr->eksponent);
+
+	curr = curr->next;
+
 	while (curr != NULL)
 	{
-		printf("+(%d)x^%d", curr->koeficijent, curr->eksponent);
+		if (curr->koeficijent != 0)
+		{
+			if (curr->eksponent == 1)
+			{
+				if (curr->koeficijent > 0) printf("+");
+				printf("%dx", curr->koeficijent);
+			}
+			else if (curr->koeficijent > 0) printf("+");
+			printf("%dx^%d", curr->koeficijent, curr->eksponent);
+		}
+
 		curr = curr->next;
 	}
 	return 0;
@@ -138,7 +171,7 @@ int mnoziPolinom(Position pol1, Position pol2, Position headRez)
 
 
 
-Position* readPolinom(char* filename)
+Position* readPolinom(char* filename, int* sizeP)
 {
 	FILE* file = fopen(filename, "r");
 	char buffer[MAX_BUFFER] = { 0 };
@@ -146,7 +179,7 @@ Position* readPolinom(char* filename)
 
 	Position* polynmos = NULL;
 
-	int n = 0;
+	int n = *sizeP;
 	while (fgets(buffer, MAX_BUFFER, file) != NULL)
 	{
 		n++;
@@ -168,8 +201,55 @@ Position* readPolinom(char* filename)
 		}
 		polynmos[n - 1] = head;
 	}
-
-
+	*sizeP = n;
 	fclose(file);
 	return polynmos;
+}
+
+Position selectPolinom(char* filename)
+{
+	int size = 0;
+	Position* polinoms = readPolinom(filename, &size);
+
+	int odabir = 0;
+
+	for(int i = 0; i < size; i++)
+	{
+		printf("%d. ", i + 1); 
+		printPolinom(polinoms[i]);
+		printf("\n");
+	}
+	printf("\nIzaberi jedan od gore navedenih polinoma: ");
+	scanf("%d", &odabir);
+
+	Position choicePolinom = polinoms[odabir - 1];
+	for(int i = 0; i < size; i++)
+	{
+		if (polinoms[i] != choicePolinom) freeList(polinoms[i]);
+	}
+	free(polinoms);
+	return choicePolinom;
+}
+
+// Cisti memoriju koju je lista zauzimala / brise sve clanove liste
+int freeList(Position head)
+{
+	if (head == NULL)
+	{
+		printf("Greska s argumentima! (freeList)");
+		return -1;
+	}
+
+	Position current = NULL, next = head->next;
+
+	while (next != NULL)
+	{
+		current = next;
+		next = current->next;
+		free(current);
+	}
+
+	head->next = NULL;
+
+	return 0;
 }
