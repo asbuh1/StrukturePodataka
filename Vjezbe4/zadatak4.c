@@ -1,6 +1,8 @@
-/* 4. Napisati program za zbrajanje i množenje polinoma.Koeficijenti i eksponenti se
+﻿/* 
+ 4. Napisati program za zbrajanje i množenje polinoma.Koeficijenti i eksponenti se
 čitaju iz datoteke.
-Napomena: Eksponenti u datoteci nisu nužno sortirani. */
+Napomena: Eksponenti u datoteci nisu nužno sortirani. 
+*/
 
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -10,70 +12,88 @@ Napomena: Eksponenti u datoteci nisu nužno sortirani. */
 
 #define MAX_BUFFER 1024
 
+#define MEM_ALLOC_ERR (-1)
+#define ARG_ERR (-2)
+;
 struct _Polinom;
 typedef struct _Polinom* Position;
-typedef struct _Polinom {
-	int eksponent;
-	int koeficijent;
+typedef struct _Polinom
+{
+	int exp;
+	int coeff;
 	Position next;
 }Polinom;
 
+Position createPolinomElement(int exp, int coeff);
+int insertPolinomElement(Position pos1, Position pos2);
+int polinomBuilder(Position head, int exp, int coeff);
+int copyPolinom(Position headRes, Position polHead);
+int sumPolinoms(Position pol1, Position pol2, Position headRes);
+int multiplyPolinoms(Position pol1, Position pol2, Position headRes);
 
-
-Position createPolinom(int eksponent, int koeficijent);
-int insertPolinom(Position pos1, Position pos2);
-int printPolinom(Position head);
-int polinomBuilder(Position head, int eksponent, int koeficijent);
-int kopirajPolinom(Position headRez, Position polHEAD);
-int zbrojiPolinom(Position pol1, Position pol2, Position headRez);
-int mnoziPolinom(Position pol1, Position pol2, Position headRez);
 Position* readPolinom(char* filename, int* sizeP);
-Position selectPolinom(char* filename);
+int selectPolinom(char* filename, Position head);
+int printPolinom(Position head);
+int printPolinomCheck(Position element, int* isFirstP);
 int freeList(Position head);
+int freeWrappedListsExclude(Position* list, Position excludedElement, int size);
 
 int main()
 {
+
 	Polinom head = { 0 };
 	Position headP = &head;
 
-	Position polnymos1 = NULL;
+	int status = 0;
 
-	polnymos1 = selectPolinom("polinom.txt");
-	
+	Polinom polinom1 = { 0 };
+	Position polinom1P = &polinom1;
+
+	if ((status = selectPolinom("polinom.txt", polinom1P)) < 0) return status;
+
 	printf("Odabir 2.:\n");
+	
+	Polinom polinom2 = { 0 };
+	Position polinom2P = &polinom2;
 
-	Position polynoms2 = selectPolinom("polinom.txt");
-
-	Polinom rez = { 0 };
-	Position rezP = &rez;
-
-	mnoziPolinom(polnymos1, polynoms2, rezP);
+	if ((status = selectPolinom("polinom.txt", polinom2P)) < 0) return status;
 
 	printf("Rezultat mnozenja!: \n");
-	printPolinom(rezP);
 
-	Polinom rez2 = { 0 };
-	Position rezP2 = &rez2;
+	Polinom res = { 0 };
+	Position resP = &res;
 
-	zbrojiPolinom(polnymos1, polynoms2, rezP2);
+	if ((status = multiplyPolinoms(polinom1P, polinom2P, resP)) < 0) return status;
+	if ((status = printPolinom(resP)) < 0) return status;
+
+	freeList(resP);
 
 	printf("\nRezultat zbrajanja!: \n");
-	printPolinom(rezP2);
 
+	if ((status = sumPolinoms(polinom1P, polinom2P, resP)) < 0) return status;
+	if ((status = printPolinom(resP)) < 0) return status;
+
+	freeList(polinom1P);
+	freeList(polinom2P);
+	freeList(resP);
 }
 
-Position createPolinom(int eksponent, int koeficijent)
+// Alocira memorija za novi element polinoma
+Position createPolinomElement(int exp, int coeff)
 {
-	Position newPos = (Position)malloc(sizeof(Polinom));
 
-	newPos->eksponent = eksponent;
-	newPos->koeficijent = koeficijent;
+	Position newPos = (Position)malloc(sizeof(Polinom));
+	if (newPos == NULL) return NULL;
+
+	newPos->exp = exp;
+	newPos->coeff = coeff;
 	newPos->next = NULL;
 
 	return newPos;
 }
 
-int insertPolinom(Position pos1, Position pos2)
+// Ubacuje element Polinoma
+int insertPolinomElement(Position pos1, Position pos2)
 {
 	pos2->next = pos1->next;
 	pos1->next = pos2;
@@ -81,73 +101,91 @@ int insertPolinom(Position pos1, Position pos2)
 	return 0;
 }
 
-int printPolinom(Position head)
+// Sortirani unos polinoma
+int polinomBuilder(Position head, int exp, int coeff)
 {
 
-	Position curr = head->next;
-
-	printf("%dx^%d", curr->koeficijent, curr->eksponent);
-
-	curr = curr->next;
-
-	while (curr != NULL)
+	if (head == NULL)
 	{
-		if (curr->koeficijent != 0)
-		{
-			if (curr->eksponent == 1)
-			{
-				if (curr->koeficijent > 0) printf("+");
-				printf("%dx", curr->koeficijent);
-			}
-			else if (curr->koeficijent > 0) printf("+");
-			printf("%dx^%d", curr->koeficijent, curr->eksponent);
-		}
-
-		curr = curr->next;
+		printf("Greska s argumentima! (polinomBuilder)");
+		return ARG_ERR;
 	}
-	return 0;
-}
 
-int polinomBuilder(Position head, int eksponent, int koeficijent)
-{
-	Position newElement = createPolinom(eksponent, koeficijent);
+	Position newElement = createPolinomElement(exp, coeff);
 	Position temp = head;
 
-	while (temp->next != NULL && (newElement->eksponent < temp->next->eksponent)) temp = temp->next;
-	if (temp->next != NULL && eksponent == temp->next->eksponent)
+	while (temp->next != NULL && (newElement->exp < temp->next->exp)) temp = temp->next;
+
+	if (temp->next != NULL && exp == temp->next->exp)
 	{
-		temp->next->koeficijent += newElement->koeficijent;
+		temp->next->coeff += newElement->coeff;
 		free(newElement);
+
+		if(temp->next->coeff == 0)
+		{
+			Position waste = temp->next;
+			temp->next = waste->next;
+			free(waste);
+		}
 	}
 	else
 	{
-		insertPolinom(temp, newElement);
+		insertPolinomElement(temp, newElement);
 	}
+
 	return 0;
-
-
 }
-int kopirajPolinom(Position headRez, Position polHEAD)
+
+// Kopira svaki element Polinoma
+int copyPolinom(Position headRez, Position polHead)
 {
-	Position curr = polHEAD->next;
+
+	if (headRez == NULL || polHead == NULL || polHead->next == NULL)
+	{
+		printf("Greska s argumentima! (copyPolinom)");
+		return ARG_ERR;
+	}
+
+	int status = 0;
+	Position curr = polHead->next;
+
 	while (curr != NULL)
 	{
-		polinomBuilder(headRez, curr->eksponent, curr->koeficijent);
+		if ((status = polinomBuilder(headRez, curr->exp, curr->coeff)) < 0) return status;
 		curr = curr->next;
 	}
+
 	return 0;
 }
 
-int zbrojiPolinom(Position pol1, Position pol2, Position headRez)
+// Zbraja dva polinoma
+int sumPolinoms(Position pol1, Position pol2, Position headRes)
 {
-	kopirajPolinom(headRez, pol1);
-	kopirajPolinom(headRez, pol2);
+
+	if (pol1 == NULL || pol2 == NULL || headRes == NULL)
+	{
+		printf("Greska s argumentima! (sumPolinoms)");
+		return ARG_ERR;
+	}
+
+	int status = 0;
+
+	if ((status = copyPolinom(headRes, pol1)) < 0) return status;
+	if ((status = copyPolinom(headRes, pol2)) < 0) return status;
 
 	return 0;
 };
 
-int mnoziPolinom(Position pol1, Position pol2, Position headRez)
+// Mnozi dva polinoma
+int multiplyPolinoms(Position pol1, Position pol2, Position headRes)
 {
+
+	if (pol1 == NULL || pol2 == NULL || headRes == NULL)
+	{
+		printf("Greska s argumentima! (multiplyPolinoms)");
+		return ARG_ERR;
+	}
+
 	Position p1 = pol1->next;
 
 	while (p1 != NULL)
@@ -156,10 +194,11 @@ int mnoziPolinom(Position pol1, Position pol2, Position headRez)
 
 		while (p2 != NULL)
 		{
-			int koeficijent = p1->koeficijent * p2->koeficijent;
-			int eksponent = p1->eksponent + p2->eksponent;
+			int koeficijent = p1->coeff * p2->coeff;
+			int eksponent = p1->exp + p2->exp;
 
-			polinomBuilder(headRez, eksponent, koeficijent);
+			int status = 0;
+			if ((status = polinomBuilder(headRes, eksponent, koeficijent)) < 0) return status;
 
 			p2 = p2->next;
 		}
@@ -167,77 +206,218 @@ int mnoziPolinom(Position pol1, Position pol2, Position headRez)
 	}
 	return 0;
 }
-
-
-
-
+// Cita polinome iz filea i vraca dinamicku listu sa polinomima
 Position* readPolinom(char* filename, int* sizeP)
 {
+
 	FILE* file = fopen(filename, "r");
+	if (file == NULL)
+	{
+		printf("Greska pri otvaranju filea! (readPolinom)");
+		return NULL;
+	}
+
 	char buffer[MAX_BUFFER] = { 0 };
-	int koeficijent, eksponent;
+	int coeff = 0, exp = 0;
 
-	Position* polynmos = NULL;
+	Position* polinoms = NULL;
 
-	int n = *sizeP;
+	int size = *sizeP;
+
 	while (fgets(buffer, MAX_BUFFER, file) != NULL)
 	{
-		n++;
+
+		size++;
 
 		Position head = (Position)malloc(sizeof(Polinom));
 
-		head->eksponent = 0;
-		head->koeficijent = 0;
+		if (head == NULL)
+		{
+			printf("Greska pri alokaciji memorije! (readPolinom)");
+			fclose(file);
+			return NULL;
+		}
+
+		head->exp = 0;
+		head->coeff = 0;
 		head->next = NULL;
 
-		polynmos = (Position*)realloc(polynmos, n * sizeof(Position));
+		Position* temp = (Position*)realloc(polinoms, size * sizeof(Position));
 
-		int offset = 0;
-		int razmak = 0;
-		while (sscanf(buffer + razmak, "%d %d%n", &koeficijent, &eksponent, &offset) == 2)
+		if (temp == NULL)
 		{
-			razmak += offset;
-			polinomBuilder(head, eksponent, koeficijent);
+			printf("Greska pri alokaciji memorije! (readPolinom)");
+
+			int status = 0;
+			if ((status = freeWrappedListsExclude(polinoms, NULL, size - 1)) < 0) return NULL;
+			fclose(file);
+
+			return NULL;
 		}
-		polynmos[n - 1] = head;
+
+		polinoms = temp;
+
+		int distance = 0, offset = 0;
+
+		while (sscanf(buffer + offset, "%d %d%n", &coeff, &exp, &distance) == 2)
+		{
+			offset += distance;
+			int status = 0;
+			if ((status = polinomBuilder(head, exp, coeff)) < 0) return NULL;
+		}
+		polinoms[size - 1] = head;
 	}
-	*sizeP = n;
+
+	*sizeP = size;
 	fclose(file);
-	return polynmos;
+
+	return polinoms;
 }
 
-Position selectPolinom(char* filename)
+// Stavlja odabrani polinom na head
+int selectPolinom(char* filename, Position head)
 {
-	int size = 0;
-	Position* polinoms = readPolinom(filename, &size);
 
-	int odabir = 0;
-
-	for(int i = 0; i < size; i++)
+	if (filename == NULL || head == NULL)
 	{
-		printf("%d. ", i + 1); 
-		printPolinom(polinoms[i]);
+		printf("Greska s argumentima (selectPolinom)");
+		return ARG_ERR;
+	}
+
+	int size = 0;
+	Position* polinoms = NULL;
+
+	if ((polinoms = readPolinom(filename, &size)) == NULL) return MEM_ALLOC_ERR;
+
+	for (int i = 0; i < size; i++)
+	{
+		printf("%d. ", i + 1);
+		int status = 0;
+		if ((status = printPolinom(polinoms[i])) < 0) return status;
 		printf("\n");
 	}
-	printf("\nIzaberi jedan od gore navedenih polinoma: ");
-	scanf("%d", &odabir);
 
-	Position choicePolinom = polinoms[odabir - 1];
-	for(int i = 0; i < size; i++)
+	int choice = 0;
+
+	while (1)
 	{
-		if (polinoms[i] != choicePolinom) freeList(polinoms[i]);
-	}
-	free(polinoms);
-	return choicePolinom;
-}
+		printf("\nIzaberi jedan od gore navedenih polinoma: ");
+		scanf("%d", &choice);
 
+		if (choice > 0 && choice <= size) break;
+		printf("\nLos odabir! Probaj opet!\n");
+
+	}
+
+	Position selectedPolinom = polinoms[choice - 1];
+
+	int status = 0;
+	if ((status = freeWrappedListsExclude(polinoms, selectedPolinom, size)) < 0) return status;
+	free(polinoms);
+
+	head->next = selectedPolinom->next;
+	free(selectedPolinom);
+
+	return 0;
+}
+// Ispisuje polinom
+int printPolinom(Position head)
+{
+
+	if (head == NULL)
+	{
+		printf("Greska s argumentima! (printPolinom)");
+		return ARG_ERR;
+	}
+
+	if (head->next == NULL) 
+	{
+		printf("0");
+		return 0;
+	}
+
+	Position curr = head->next;
+	int isFirst = 1;
+
+	while (curr != NULL)
+	{
+		int status = 0;
+		if ((status = printPolinomCheck(curr, &isFirst)) < 0) return status;
+		curr = curr->next;
+	}
+
+	return 0;
+}
+// Pomocna funkcija za ispis clana polinoma
+int printPolinomCheck(Position element, int* isFirstP)
+{
+
+	if (element == NULL || isFirstP == NULL)
+	{
+		printf("Greska s argumentima! (printPolinomCheck)");
+		return ARG_ERR;
+	}
+
+	int isFirst = *isFirstP;
+
+	if (element->coeff != 0)
+	{
+		if (element->exp == 1)
+		{
+			if (element->coeff > 0 && isFirst == 0) printf("+");
+			printf("%dx", element->coeff);
+		}
+		else
+		{
+			if (element->coeff > 0 && isFirst == 0) printf("+");
+
+			if (element->exp == 0) printf("%d", element->coeff);
+
+			else if (abs(element->coeff) == 1)
+			{
+				if (element->coeff == -1) printf("-");
+				printf("x^%d", element->exp);
+			}
+			else printf("%dx^%d", element->coeff, element->exp);
+		}
+
+		isFirst = 0;
+		*isFirstP = isFirst;
+
+	}
+
+	return 0;
+}
+// Pomocna funkcija koja brise dinamicki niz vezanih listi sa mogucnosti ne brisanja odredenog elementa liste
+int freeWrappedListsExclude(Position* list, Position excludedElement, int size)
+{
+
+	if (list == NULL || size < 0)
+	{
+		printf("Greska s argumentima(freeWrappedListExclude)");
+		return ARG_ERR;
+	}
+
+	for (int i = 0; i < size; i++)
+	{
+		if (list[i] != excludedElement)
+		{
+			int status = 0;
+			if ((status = freeList(list[i])) < 0) return status;
+			free(list[i]);
+		}
+	}
+
+	return 0;
+}
 // Cisti memoriju koju je lista zauzimala / brise sve clanove liste
 int freeList(Position head)
 {
+
 	if (head == NULL)
 	{
 		printf("Greska s argumentima! (freeList)");
-		return -1;
+		return ARG_ERR;
 	}
 
 	Position current = NULL, next = head->next;
@@ -253,3 +433,13 @@ int freeList(Position head)
 
 	return 0;
 }
+
+
+
+
+
+
+
+
+
+
