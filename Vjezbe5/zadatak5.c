@@ -118,8 +118,8 @@ int readEngine(char* filename, Position head, Position calcStog)
 			
 				if (new[0] == '+') newa = int2 + int1;
 				else if (new[0] == '*') newa = int2 * int1;
-				else if (new[0] == '/') newa = int2 / int1;
-				else if (new[0] == '-') newa = int2 - int1;
+				else if (new[0] == '/') newa = int1 / int2;
+				else if (new[0] == '-') newa = int1 - int2;
 
 				char* returnedElement = (char*)malloc(brojacZnamenki(newa) * sizeof(char) + 1);
 				sprintf(returnedElement,"%d",newa);
