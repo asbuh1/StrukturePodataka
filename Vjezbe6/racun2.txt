@@ -1,0 +1,7 @@
+2026-11-11
+Ananas 2 5
+Zebra 1 10
+Crocket 2 5
+Jagoda 3 10
+Jagoda 4 25
+Jagoda 5 600
