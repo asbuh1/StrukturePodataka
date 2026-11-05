@@ -24,47 +24,26 @@ typedef struct _Element
 	Position next;
 }Element;
 
+int reader(char* filename);
 char* pop(Position head);
 int push(Position head, char* val);
 Position createElement(char* val);
-int readFile(char* filename, Position headNum, Position headString);
+int readFile(Position headNum, Position headString, char* buffer);
 int calcMath(char operation, int a, int b);
 Position makeHead();
 int makeString(Position head, char* operation);
 int calcNumber(Position head, char* operation);
 int freeStacks(Position headNum, Position headHead);
+int printResult(char* buffer, Position headNum, Position headString);
 
 int main()
 {
-	Position headNum = makeHead();
-	Position headString = makeHead();
 
 	char* filename = "test.txt";
 
 	int status = 0;
-	if ((status = readFile(filename, headNum, headString)) < 0) return status;
+	if ((status = reader(filename)) < 0) return status;
 
-	char* stringInfix = NULL;
-	char* solved = NULL;
-
-	if ((stringInfix = pop(headString)) == NULL)
-	{
-		free(headString);
-		return MEM_ALLOC_ERR;
-	}
-
-	if ((solved = pop(headNum)) == NULL)
-	{
-		free(headNum);
-		return MEM_ALLOC_ERR;
-	}
-
-	printf(" %s -> %s", stringInfix, solved);
-
-	free(stringInfix);
-	free(solved);
-	
-	freeStacks(headNum, headString);
 	return 0;
 }
 
@@ -133,7 +112,7 @@ Position createElement(char* val)
 
 	temp->next = NULL;
 	temp->num = (char*)malloc(strlen(val) + 1);
-	
+
 	if (temp->num == NULL)
 	{
 		printf("Greska pri alokaciji memorije! (createElement)");
@@ -157,7 +136,7 @@ int calcMath(char operation, int int1, int int2)
 	{
 		if (int2 == 0)
 		{
-			printf("Pokusaj djeljenja s 0!");
+			printf("Pokusaj djeljenja s 0! (calcMath)");
 			return LOGIC_ERR;
 		}
 		return int1 / int2;
@@ -170,7 +149,7 @@ int calcMath(char operation, int int1, int int2)
 // Logika za pretvaranje char* u int, racuanje s int, pa vracanje nazad u char*
 int calcNumber(Position head, char* operation)
 {
-	if(head == NULL || operation == NULL)
+	if (head == NULL || operation == NULL)
 	{
 		printf("Greska s argumentima!");
 		return ARG_ERR;
@@ -187,7 +166,7 @@ int calcNumber(Position head, char* operation)
 	free(checkErr);
 
 	if ((checkErr = pop(head)) == NULL) return ARG_ERR;
-	
+
 	sscanf(checkErr, "%d", &int1);
 	free(checkErr);
 
@@ -195,17 +174,7 @@ int calcNumber(Position head, char* operation)
 	char buffer[MAX_BUFFER] = { 0 };
 	sprintf(buffer, "%d", result);
 
-	char* returnedElement = (char*)malloc(strlen(buffer) * sizeof(char) + 1);
-
-	if (returnedElement == NULL) 
-	{
-		printf("Greska pri alokaciji memorije! (calcNumber)!");
-		return MEM_ALLOC_ERR;
-	}
-	sprintf(returnedElement, "%d", result);
-
-	push(head, returnedElement);
-	free(returnedElement);
+	push(head, buffer);
 
 	return 0;
 }
@@ -213,139 +182,187 @@ int calcNumber(Position head, char* operation)
 // Skida dva elementa sa stoga, kombinira ih ovisno o operaciji, vraca nazad na stog
 int makeString(Position head, char* operation)
 {
-	if(head == NULL || operation == NULL)
+	if (head == NULL || operation == NULL)
 	{
 		printf("Greska s argumentima! (makeString)");
 		return ARG_ERR;
 	}
 
-	char* pos2 = pop(head);
-	char* pos1 = pop(head);
-	if (pos2 == NULL || pos1 == NULL) return -1;
+	char* pos2 = NULL;
+	char* pos1 = NULL;
+	char buffer[MAX_BUFFER] = { 0 };
 
-	char* newElement = (char*)malloc(strlen(pos2) + strlen(pos1) + strlen(operation) + 3 * sizeof(char));
-
-	if(newElement == NULL)
+	if((pos2 = pop(head)) == NULL) 
 	{
-		printf("Greska pri alokaciji memorije! (makeString)");
-		return MEM_ALLOC_ERR;
+		return ARG_ERR;
 	}
 
-	strcpy(newElement, "(");
-	strcat(newElement, pos1);
-	strcat(newElement, operation);
-	strcat(newElement, pos2);
-	strcat(newElement, ")");
+	if ((pos1 = pop(head)) == NULL)
+	{
+		free(pos2);
+		return ARG_ERR;
+	}
+	
+
+	strcpy(buffer, "(");
+	strcat(buffer, pos1);
+	strcat(buffer, operation);
+	strcat(buffer, pos2);
+	strcat(buffer, ")");
 
 	free(pos1);
 	free(pos2);
 
-	push(head, newElement);
-	free(newElement);
+	push(head, buffer);
 
 	return 0;
 }
 
-// Cita sve postfix elemente u fileu, te pomocu stoga izraduje infix izraz i racuna rezultat
-int readFile(char* filename, Position headNum, Position headString)
+// Ispisuje Pocetni postfix izraz, convertani infix i rezultat
+int printResult(char* buffer, Position headNum, Position headString)
 {
-	if (filename == NULL || headNum == NULL || headString == NULL)
+	if (buffer == NULL || headNum == NULL || headString == NULL)
+	{
+		printf("Greska s argumentima! (printResult)");
+		return ARG_ERR;
+	}
+	char* stringInfix = NULL;
+	char* solved = NULL;
+
+	if ((stringInfix = pop(headString)) == NULL) return MEM_ALLOC_ERR;
+	if ((solved = pop(headNum)) == NULL) return MEM_ALLOC_ERR;
+	
+	printf("(%s) -> %s -> %s\n", buffer, stringInfix, solved);
+
+	free(stringInfix);
+	free(solved);
+	return 0;
+}
+
+// Cita postfix izraze iz filea
+int reader(char* filename)
+{
+	if (filename == NULL)
 	{
 		printf("Greska s argumentima! (readFile)");
 		return ARG_ERR;
 	}
 
 	FILE* file = fopen(filename, "r");
-	if(file == NULL)
+
+	if (file == NULL)
 	{
-		printf("Greska pri otvaranju filea! (readFile)");
+		printf("Greska pri otvaranju filea! (reader)");
 		return FILE_ERR;
 	}
 
+	Position headNum = makeHead();
+	Position headString = makeHead();
 
 	char buffer[MAX_BUFFER] = { 0 };
-
-	fgets(buffer, MAX_BUFFER, file);
-	printf("(%s) ->", buffer);
-	rewind(file);
-
-	char* new = NULL;
-
-	while (fscanf(file, "%s", buffer) != EOF)
+	while(fgets(buffer, MAX_BUFFER, file) != NULL)
 	{
-		if (strcmp("(", buffer))
+		
+		int lengthofBuffer = (int)strlen(buffer) - 1;
+		if (lengthofBuffer > 1 && buffer[lengthofBuffer] == '\n') buffer[lengthofBuffer] = 0;
+
+		int status = 0;
+		
+		if ((status = readFile(headNum, headString, buffer)) < 0)
 		{
-			int status = 0;
-			new = (char*)malloc((int)strlen(buffer) * sizeof(char) + 1);
-			if (new == NULL)
+			
+			freeStacks(headNum, headString);
+			if (status == DATA_ERR)
 			{
-				freeStacks(headNum, headString);
-				printf("Greska pri alokaciji memorije!");
-				fclose(file);
-				return MEM_ALLOC_ERR;
+				headNum = makeHead(), headString = makeHead();
+				continue;
 			}
-			strcpy(new, buffer);
 
-			if (strchr("+-/*", new[0]) && strlen(new) == 1)
+			fclose(file);
+			return status;
+		}
+
+		if ((status = printResult(buffer, headNum, headString)) < 0)
+		{
+			freeStacks(headNum, headString);
+			fclose(file);
+			return status;
+		}
+		freeStacks(headNum, headString);
+		headNum = makeHead();
+		headString = makeHead();
+	}
+
+	freeStacks(headNum, headString);
+	fclose(file);
+
+	return 0;
+}
+
+// Cita sve postfix elemente u fileu, te pomocu stoga izraduje infix izraz i racuna rezultat
+int readFile(Position headNum, Position headString, char* buffer)
+{
+	if (headNum == NULL || headString == NULL || buffer == NULL)
+	{
+		printf("Greska s argumentima! (readFile)");
+		return ARG_ERR;
+	}
+
+	int lengthOffset = 0, offset  = 0;
+
+	char readBuffer[MAX_BUFFER] = { 0 };
+
+	int numberOfOperations = 0, numberOfNumbers = 0;
+	int status = 0;
+	while (sscanf(buffer + lengthOffset, "%s%n", readBuffer, &offset) == 1)
+	{
+		if (strcmp("(", readBuffer))
+		{
+			status = 0;
+
+			if (strchr("+-/*", readBuffer[0]) && strlen(readBuffer) == 1)
 			{
+				numberOfOperations++;
 
-				char* pos2 = NULL;
-				char* pos1 = NULL;
-
-				if ((status = makeString(headString, new)) < 0)
+				if(numberOfOperations >= numberOfNumbers)
 				{
-					freeStacks(headNum, headString);
-					free(new);
-					fclose(file);
-					return status;
-				}
-				
-				if ((status = calcNumber(headNum, new)) < 0)
-				{
-					freeStacks(headNum, headString);
-					free(new);
-					fclose(file);
-					return status;
+					printf("Greska u logici postfix izraza! Vise operacija od dopustenog! (readFile)\n");
+					return DATA_ERR;
 				}
 
+				if ((status = makeString(headString, readBuffer)) < 0) return status;
+				if ((status = calcNumber(headNum, readBuffer)) < 0) return status;
 			}
-			else if (sscanf(new, "%d", &status) == 1)
-			{
-				if ((status = push(headString, new)) < 0)
-				{
-					freeStacks(headNum, headString);
-					free(new);
-					fclose(file);
-					return status;
-				}
 
-				if ((status = push(headNum, new)) < 0)
-				{
-					freeStacks(headNum, headString);
-					free(new);
-					fclose(file);
-					return status;
-				}
+			else if (sscanf(readBuffer, "%d", &status) == 1)
+			{
+				numberOfNumbers++;
+				if ((status = push(headString, readBuffer)) < 0) return status;
+				if ((status = push(headNum, readBuffer)) < 0) return status;
 
 			}
 			else
 			{
-				printf("Unesen je nepodrzan znak! Zatvaram program!");
-				freeStacks(headNum, headString);
+				printf("Unesen je nepodrzan znak! Zatvaram program!(readFile)\n");
 				return DATA_ERR;
 			}
-			free(new);
 		}
-		
+		lengthOffset += offset;
+	};
+	
+	if (numberOfNumbers > (numberOfOperations + 1 ))
+	{
+		printf("Greska! Posfix izraz je krivo unesen! Imate pre malo operacija!(readFile)");
+		return DATA_ERR;
 	}
-	fclose(file);
-	return 0;
+
+	return status;
 }
 
 // Oslobada memoriju u Stogovima
 int freeStacks(Position headNum, Position headString)
 {
-	if(headNum != NULL)
+	if (headNum != NULL)
 	{
 		Position curr = headNum->next;
 		while (curr != NULL)
