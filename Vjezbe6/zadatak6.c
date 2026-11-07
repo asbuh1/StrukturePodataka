@@ -52,10 +52,10 @@ PosArt makeArticle(char* name, int price, int amount);
 int insertArticle(PosArt head, PosArt article);
 int search(PosArt head, char* searchName, int* count, int* priceTotal);
 int specialSearchListPrint(PosRe head, char* numFrom, char* numTo);
-int specialSearch(PosRe head);
+int specialSearch(PosRe head, PosRe* indexer, int length);
 int printDates(PosRe head);
-int checkChoiceValidity(PosRe head, char* choice);
-char* choiceEngine(PosRe head);
+int checkChoiceValidity(PosRe head, char* choice, int length, PosRe* indexer);
+char* choiceEngine(PosRe head, PosRe* indexer, int length);
 PosRe* makeMatchList(PosRe head, char* from, char* to, int* size, char* item);
 int printMatchList(PosRe* matchList, int size);
 int printTotal(PosRe* matchList, int size, char* word);
@@ -66,18 +66,51 @@ int simpleSearch(PosArt head, char* item);
 int simpleQuestionAction(char* question);
 int freeArticle(PosArt head);
 int freeReceipt(PosRe head);
+int fillIndexer(PosRe head, PosRe** indexer, int* lengthP);
+
 
 int main()
 {
 	PosRe head = makeHeadReceipt();
 
+	PosRe* indexer = NULL;
+	int length = 0;
+
 	fileLoader(head, "racuni.txt");
+
+	fillIndexer(head, &indexer, &length);
+
+	
 
 	// int status = 0;
 	// if ((status = readEngine("racuni.txt")) < 0) return status;
 
-	specialSearch(head);
+	specialSearch(head, indexer, length);
 
+	return 0;
+}
+
+// Dodan je indexer, ideja je koristiti ga za tipa printanje datuma uzastopno, zbog jednostavnijeg biranja, te normalnije unaprijed alocirane memorije za tipa matchList i drugo
+
+int fillIndexer(PosRe head, PosRe** indexer, int* lengthP)
+{
+	int length = 1;
+
+	for(PosRe curr = head->next; curr != NULL; curr = curr->next )
+	{
+		PosRe* temp = (PosRe*)realloc(*indexer, length * sizeof(PosRe));
+		
+		if(temp == NULL) 
+		{
+			printf("Greska pri alokaciji memorije! (fillIndexer)");
+			return MEM_ALLOC_ERR;
+		}
+		*indexer = temp;
+		
+		(*indexer)[length - 1] = curr;
+		length++;
+	}
+	*lengthP = length - 1;
 	return 0;
 }
 
@@ -104,10 +137,13 @@ int fileLoader(PosRe head, char* filename)
 
 	int status = 0;
 
-	// Promijenjene sistem sa fscanf buffer -> fileArticles, u fgets buffer -> sscanf filenameBuffer;
+	// Dodaj obicnu listu sa svim racunima za printanje datuma i toga
+	
+	int length = 0;
 
 	while (fgets(buffer, MAX_BUFFER, file) != NULL)
 	{
+		length++;
 		char filenameBuffer[MAX_BUFFER] = { 0 };
 		sscanf(buffer, "%s", filenameBuffer);
 
@@ -118,15 +154,6 @@ int fileLoader(PosRe head, char* filename)
 			return status;
 		}
 	}
-	/*
-	// Pomakni specialSearch  - > generalni run ili nesto
-	if ((status = specialSearch(head)) < 0)
-	{
-		fclose(file);
-		freeReceipt(head);
-		return status;
-	}
-	*/
 
 	fclose(file);
 	return 0;
@@ -342,9 +369,11 @@ int printDates(PosRe head)
 		printf("Greska s argumentima! (printDates)");
 		return ARG_ERR;
 	}
+	
+	int index = 0;
 
 	printf("Ispisujem popis datuma! :\n");
-	for (PosRe curr = head->next; curr != NULL; curr = curr->next) printf("%s\n", curr->date);
+	for (PosRe curr = head->next; curr != NULL; curr = curr->next) printf("%d. %s\n",index++ + 1, curr->date);
 	printf("-----------------------\n");
 	return 0;
 
@@ -352,7 +381,7 @@ int printDates(PosRe head)
 
 
 // Provjerava postoji li korisnikov odabir datuma
-int checkChoiceValidity(PosRe head, char* choice)
+int checkChoiceValidity(PosRe head, char* choice, int length, PosRe* indexer)
 {
 	if (head == NULL || choice == NULL)
 	{
@@ -360,8 +389,23 @@ int checkChoiceValidity(PosRe head, char* choice)
 		return ARG_ERR;
 	}
 
-	for (PosRe curr = head->next; curr != NULL; curr = curr->next) if (strcmp(choice, curr->date) == 0) return 1;
-	return 0;
+	int choiceNum = 0;
+	if (sscanf(choice, "%d", &choiceNum) != 1)
+	{
+		printf("Odaberite broj!\n");
+		return 0;
+	}
+	else if (choiceNum <= 0 || choiceNum > length) 
+	{
+		printf("Odaberite broj unutar trazenog raspona!\n");
+		return 0;
+	}
+	/*
+	char* chosen = indexer[choiceNum - 1]->date;
+
+	for (PosRe curr = head->next; curr != NULL; curr = curr->next) if (strcmp(chosen, curr->date) == 0) return (choiceNum);*/
+
+	return (choiceNum);
 }
 
 
@@ -445,7 +489,7 @@ int specialSearchListPrint(PosRe head, char* numFrom, char* numTo)
 
 // Promjeni princip mijenjanja da radi s indexiranim datumima umjesto gluposti sa pisanjem cijelog datuma: n. datum
 // Sluzi za biranje datuma
-char* choiceEngine(PosRe head)
+char* choiceEngine(PosRe head, PosRe* indexer, int length)
 {
 	if (head == NULL)
 	{
@@ -454,36 +498,31 @@ char* choiceEngine(PosRe head)
 	}
 
 	char choice[MAX_LINE] = { 0 };
-
+	int isValid = 0;
 	while (1)
 	{
 		scanf("%s", choice);
-		int isValid = 0;
+		// Izmjena provjere iz samo datuma u broj, kako bi datum mogao izaci iz vezane liste ne iz ispisa, index izlazi iz checkChoiceValidity
+		
 
-		if ((isValid = checkChoiceValidity(head, choice)) < 0) return NULL;
+		if ((isValid = checkChoiceValidity(head, choice, length, indexer)) < 0) return NULL;
 
-		if (isValid == 1) break;
-		else
-		{
-			printf("Datum koji ste odabrali nije ponuden! Pokusajte opet!\n");
-		}
+		printf("%d", isValid);
+		if (isValid >= 1) break;
+		
 	}
+	
+	
 
-	char* returnedValue = (char*)malloc(strlen(choice) * sizeof(char) + 1);
+	char* returnedValue = indexer[isValid-1]->date;
 
-	if (returnedValue == NULL)
-	{
-		printf("Greska pi alokaciji memorije! (choiceEngine)");
-		return NULL;
-	}
-
-	sscanf(choice, "%s", returnedValue);
+	
 
 	return returnedValue;
 }
 
 // Pokrece funkciju za biranje i ispis racuna
-int specialSearch(PosRe head)
+int specialSearch(PosRe head, PosRe* indexer, int length)
 {
 	if (head == NULL)
 	{
@@ -511,9 +550,9 @@ int specialSearch(PosRe head)
 			{
 				printf("Od: \n");
 
-				numFrom = choiceEngine(head);
+				numFrom = choiceEngine(head, indexer, length);
 				printf("Do: \n");
-				numTo = choiceEngine(head);
+				numTo = choiceEngine(head, indexer, length);
 
 				if (numFrom == NULL || numTo == NULL) return MEM_ALLOC_ERR;
 
