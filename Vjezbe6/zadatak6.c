@@ -61,7 +61,7 @@ int printMatchList(PosRe* matchList, int size);
 int printTotal(PosRe* matchList, int size, char* word);
 int printArticles(PosArt head);
 int printReceipt(PosRe head);
-int checkDateCompatibility(char* to, char* from);
+int checkDateCompatibility(char** to, char** from);
 int simpleSearch(PosArt head, char* item);
 int simpleQuestionAction(char* question);
 int freeArticle(PosArt head);
@@ -383,22 +383,29 @@ int simpleQuestionAction(char* question)
 }
 
 
-
+// Promijenjen checkDateCompatiblity da ispravlja format ako mu se ne svida
 // Provjerava kakvi su datumi u odnosu jedan na drugog
-int checkDateCompatibility(char* to, char* from)
+int checkDateCompatibility(char** to, char** from)
 {
+	char* dateTo = *to;
+	char* dateFrom = *from;
 
-	if (to == NULL || from == NULL)
+	if (dateTo == NULL || dateFrom == NULL)
 	{
 		printf("Greska s argumentima! (checkDateCompatibility)");
 		return ARG_ERR;
 	}
 
-	if (strcmp(from, to) > 0)
+	if (strcmp(dateFrom, dateTo) > 0)
 	{
-		printf("Nije podrzan format! Napisite ponovno!\n");
-		return 1;
+		printf("Testiram promjenu umjesto greske!");
+
+		
+		*to = dateFrom;
+		*from = dateTo;
+
 	}
+
 	return 0;
 }
 
@@ -436,6 +443,7 @@ int specialSearchListPrint(PosRe head, char* numFrom, char* numTo)
 	return 0;
 }
 
+// Promjeni princip mijenjanja da radi s indexiranim datumima umjesto gluposti sa pisanjem cijelog datuma: n. datum
 // Sluzi za biranje datuma
 char* choiceEngine(PosRe head)
 {
@@ -509,9 +517,13 @@ int specialSearch(PosRe head)
 
 				if (numFrom == NULL || numTo == NULL) return MEM_ALLOC_ERR;
 
-				int isCompatible = checkDateCompatibility(numTo, numFrom);
-				if (isCompatible < 0) return isCompatible;
+				// Promjenjena logika da ih ispravlja!
 
+				int isCompatible = checkDateCompatibility(&numTo, &numFrom);
+
+				/*int isCompatible = checkDateCompatibility(numTo, numFrom);
+				if (isCompatible < 0) return isCompatible;
+				*/
 				if (isCompatible == 0) break;
 
 				free(numFrom);
