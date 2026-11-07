@@ -42,9 +42,9 @@ typedef struct _Receipt
 
 PosRe makeHeadReceipt();
 PosArt makeHeadArticle();
-int readEngine(char* filename);
+int fileLoader(PosRe head, char* filename);
 int readReceipt(char* filename, PosRe Receipt);
-PosRe makeReceipt();
+PosRe makeReceipt(char* dateBuffer);
 int insertRecipe(PosRe head, PosRe receipt);
 int insertElementReceipt(PosRe rec1, PosRe rec2);
 int insertElementArticle(PosArt rec1, PosArt rec2);
@@ -55,7 +55,7 @@ int specialSearchListPrint(PosRe head, char* numFrom, char* numTo);
 int specialSearch(PosRe head);
 int printDates(PosRe head);
 int checkChoiceValidity(PosRe head, char* choice);
-char * choiceEngine(PosRe head);
+char* choiceEngine(PosRe head);
 PosRe* makeMatchList(PosRe head, char* from, char* to, int* size, char* item);
 int printMatchList(PosRe* matchList, int size);
 int printTotal(PosRe* matchList, int size, char* word);
@@ -69,14 +69,22 @@ int freeReceipt(PosRe head);
 
 int main()
 {
-	int status = 0;
-	if ((status = readEngine("racuni.txt")) < 0) return status;
+	PosRe head = makeHeadReceipt();
+
+	fileLoader(head, "racuni.txt");
+
+	// int status = 0;
+	// if ((status = readEngine("racuni.txt")) < 0) return status;
+
+	specialSearch(head);
 
 	return 0;
 }
 
+
+// Pomaknut head u main zasad -> poslije pomakni u run, fileLoader samo ucitaju racune iz filea
 // Gradi vezanu listu racuna, zove loop za trazenje artikala po racunima
-int readEngine(char* filename)
+int fileLoader(PosRe head, char* filename)
 {
 	if (filename == NULL)
 	{
@@ -85,49 +93,40 @@ int readEngine(char* filename)
 	}
 
 	FILE* file = fopen(filename, "r");
-	
-	if (file == NULL) 
+
+	if (file == NULL)
 	{
 		printf("Greska pri otvaranju filea! (readEngine)");
 		return FILE_ERR;
 	}
 
 	char buffer[MAX_BUFFER] = { 0 };
-	PosRe head = makeHeadReceipt();
 
 	int status = 0;
 
-	while (fscanf(file, "%s", buffer) != EOF)
-	{
-		char* fileArticles = (char*)malloc(strlen(buffer) * sizeof(char) + 1);
+	// Promijenjene sistem sa fscanf buffer -> fileArticles, u fgets buffer -> sscanf filenameBuffer;
 
-		if (fileArticles == NULL) 
+	while (fgets(buffer, MAX_BUFFER, file) != NULL)
+	{
+		char filenameBuffer[MAX_BUFFER] = { 0 };
+		sscanf(buffer, "%s", filenameBuffer);
+
+		if ((status = readReceipt(filenameBuffer, head)) < 0)
 		{
-			printf("Greska pri alokaciji memorije! (readEngine)");
 			fclose(file);
 			freeReceipt(head);
-			return MEM_ALLOC_ERR;
+			return status;
 		}
-
-		strcpy(fileArticles, buffer);
-
-			if ((status = readReceipt(fileArticles, head)) < 0)
-			{
-				fclose(file);
-				freeReceipt(head);
-				free(fileArticles);
-				return status;
-			}
-			free(fileArticles);
 	}
-	if ((status = specialSearch(head)) < 0) 
+	/*
+	// Pomakni specialSearch  - > generalni run ili nesto
+	if ((status = specialSearch(head)) < 0)
 	{
 		fclose(file);
 		freeReceipt(head);
 		return status;
 	}
-	
-	freeReceipt(head);
+	*/
 
 	fclose(file);
 	return 0;
@@ -156,12 +155,26 @@ PosArt makeHeadArticle()
 }
 
 // Stvara prazan Receipt
-PosRe makeReceipt()
+PosRe makeReceipt(char* dateBuffer)
 {
-	PosRe receipt = (PosRe)malloc(sizeof(Receipt));
-	receipt->articles = NULL;
+	// Mijenjan iz identincnog makeHeadReceiptu da stavlja datum sam
+
+	char* tempDate = (char*)malloc(strlen(dateBuffer) * sizeof(char) + 1);
+	
+
+	if (tempDate == NULL)
+	{
+		printf("Greska pri alokaciji memorije! (makeReceipt)");
+		return NULL;
+	}
+
+	sscanf(dateBuffer, "%s", tempDate);
+
+	PosRe receipt = makeHeadReceipt();
+
+	receipt->articles = makeHeadArticle();
 	receipt->next = NULL;
-	receipt->date = NULL;
+	receipt->date = tempDate;
 	return receipt;
 }
 
@@ -177,7 +190,7 @@ PosArt makeArticle(char* name, int price, int amount)
 	PosArt article = (PosArt)malloc(sizeof(Article));
 	char* temp = (char*)malloc(strlen(name) + 1);
 
-	if(article == NULL || temp == NULL)
+	if (article == NULL || temp == NULL)
 	{
 		printf("Greska pri alokaciji memorije! (makeArticle)");
 		return NULL;
@@ -232,7 +245,7 @@ int insertRecipe(PosRe head, PosRe inserted)
 	while (curr->next != NULL && (strcmp(curr->next->date, inserted->date)) < 0) curr = curr->next;
 
 	int status = 0;
-	if((status = insertElementReceipt(curr, inserted)) < 0) return status;
+	if ((status = insertElementReceipt(curr, inserted)) < 0) return status;
 
 	return 0;
 
@@ -276,34 +289,28 @@ int readReceipt(char* filename, PosRe head)
 	char buffer[MAX_BUFFER] = { 0 };
 
 	fgets(buffer, MAX_BUFFER, file);
-	char* date = (char*)malloc(strlen(buffer) * sizeof(char) + 1);
 
-	if (date == NULL)
-	{
-		printf("Greska pri alokaciji memorije! (readReceipt)");
-		return MEM_ALLOC_ERR;
-	}
+	// Pomakni stvaranje date filea u makeReceipt
 
-	PosRe receipt = makeReceipt();
-	sscanf(buffer, "%s", date);
-	receipt->date = date;
+	PosRe receipt = makeReceipt(buffer);
 
 	int status = 0;
 
-	if ((status = insertRecipe(head, receipt)) < 0) 
+	if ((status = insertRecipe(head, receipt)) < 0)
 	{
 		free(receipt->date);
 		free(receipt);
 		fclose(file);
 		return status;
 	}
-	
-	PosArt temp = makeHeadArticle();
-	receipt->articles = temp;
+
+	// Prebaceno stvaranje tempa -> articleheada u MakeReceipt
+
 	while (fgets(buffer, MAX_BUFFER, file) != NULL)
 	{
 		char name[MAX_LINE] = { 0 };
 		int price = 0, amount = 0;
+
 		sscanf(buffer, "%s %d %d", name, &amount, &price);
 
 		PosArt article = makeArticle(name, price, amount);
@@ -314,15 +321,15 @@ int readReceipt(char* filename, PosRe head)
 			freeReceipt(head);
 			return MEM_ALLOC_ERR;
 		}
-		
 
-		if ((status = insertArticle(temp, article)) < 0) 
+		if ((status = insertArticle(receipt->articles, article)) < 0)
 		{
 			fclose(file);
 			freeReceipt(head);
 			return status;
 		}
 	}
+
 	fclose(file);
 	return 0;
 }
@@ -375,6 +382,8 @@ int simpleQuestionAction(char* question)
 	return 0;
 }
 
+
+
 // Provjerava kakvi su datumi u odnosu jedan na drugog
 int checkDateCompatibility(char* to, char* from)
 {
@@ -417,7 +426,7 @@ int specialSearchListPrint(PosRe head, char* numFrom, char* numTo)
 		printf("Doslo je do greske pri trazenju! Nije pronaden ni jedan isti artikal u racunima! Gasenje programa!\n");
 		return USR_ERR;
 	}
-	
+
 
 	int status = 0;
 	if ((status = printTotal(matchList, size, trazeno)) < 0) return status;
@@ -442,7 +451,7 @@ char* choiceEngine(PosRe head)
 	{
 		scanf("%s", choice);
 		int isValid = 0;
-		
+
 		if ((isValid = checkChoiceValidity(head, choice)) < 0) return NULL;
 
 		if (isValid == 1) break;
@@ -454,7 +463,7 @@ char* choiceEngine(PosRe head)
 
 	char* returnedValue = (char*)malloc(strlen(choice) * sizeof(char) + 1);
 
-	if(returnedValue == NULL)
+	if (returnedValue == NULL)
 	{
 		printf("Greska pi alokaciji memorije! (choiceEngine)");
 		return NULL;
@@ -580,23 +589,23 @@ PosRe* makeMatchList(PosRe head, char* from, char* to, int* size, char* item)
 
 	PosRe* matchList = NULL;
 	int counter = 0;
-	for(PosRe curr = head->next; curr != NULL; curr = curr->next)
+	for (PosRe curr = head->next; curr != NULL; curr = curr->next)
 	{
 		int status = simpleSearch(curr->articles, item);
 		if (status < 0) return NULL;
 
-	if((strcmp(from, curr->date) <= 0 )&& ((strcmp(to, curr->date) >= 0)) && status == 1)
-	{
-		counter++;
-		PosRe* temp = (PosRe*)realloc(matchList, counter * sizeof(PosRe));
-		if (temp == NULL)
+		if ((strcmp(from, curr->date) <= 0) && ((strcmp(to, curr->date) >= 0)) && status == 1)
 		{
-			free(matchList);
-			return NULL;
+			counter++;
+			PosRe* temp = (PosRe*)realloc(matchList, counter * sizeof(PosRe));
+			if (temp == NULL)
+			{
+				free(matchList);
+				return NULL;
+			}
+			temp[counter - 1] = curr;
+			matchList = temp;
 		}
-		temp[counter - 1] = curr;
-		matchList = temp;
-	}
 	}
 
 	if (counter == 0) return NULL;
@@ -616,7 +625,7 @@ int printMatchList(PosRe* matchList, int size)
 		return ARG_ERR;
 	}
 	int status = 0;
-	for(int i = 0; i < size; i++)
+	for (int i = 0; i < size; i++)
 	{
 		if ((status = printReceipt(matchList[i])) < 0) return status;
 	}
@@ -643,7 +652,7 @@ int printReceipt(PosRe receipt)
 // Ispisuje artikle
 int printArticles(PosArt head)
 {
-	if (head== NULL)
+	if (head == NULL)
 	{
 		printf("Greska s argumentima! (printArticles)");
 		return ARG_ERR;
@@ -651,10 +660,10 @@ int printArticles(PosArt head)
 
 	int nCounter = 0;
 	printf("Br. Naziv Kolicina Cijena\n");
-	for(PosArt curr = head->next; curr != NULL; curr = curr->next)
+	for (PosArt curr = head->next; curr != NULL; curr = curr->next)
 	{
 		nCounter++;
-		printf("%d. %s %d %d\n", nCounter, curr->name,curr->amount, curr->price);
+		printf("%d. %s %d %d\n", nCounter, curr->name, curr->amount, curr->price);
 	}
 	return 0;
 }
@@ -669,14 +678,14 @@ int printTotal(PosRe* matchList, int size, char* word)
 	}
 
 	int totalPrice = 0, counter = 0;
-	for(int i = 0; i < size; i++)
+	for (int i = 0; i < size; i++)
 	{
 		int onePrice = 0, oneCounter = 0;
 		int status = search(matchList[i]->articles, word, &oneCounter, &onePrice);
 		if (status < 0) return status;
 
 		if (status == 100) totalPrice += onePrice, counter += oneCounter;
-		
+
 	}
 	printf("\nNa %s je u navedenom periodu potroseno (%d), te je artikal kupljen (%d) puta", word, totalPrice, counter);
 	return 0;
@@ -710,8 +719,3 @@ int freeReceipt(PosRe head)
 	}
 	return 0;
 }
-
-
-
-
-
