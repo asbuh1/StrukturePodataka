@@ -45,11 +45,11 @@ PosArt makeHeadArticle();
 int fileLoader(PosRe head, char* filename);
 int readReceipt(char* filename, PosRe Receipt);
 PosRe makeReceipt(char* dateBuffer);
-int insertRecipe(PosRe head, PosRe receipt);
+int insertRecipe(PosRe head, PosRe inserted, int sortReceiptP);
 int insertElementReceipt(PosRe rec1, PosRe rec2);
 int insertElementArticle(PosArt rec1, PosArt rec2);
 PosArt makeArticle(char* name, int price, int amount);
-int insertArticle(PosArt head, PosArt article);
+int insertArticle(PosArt head, PosArt article, int sortArticles);
 int search(PosArt head, char* searchName, int* count, int* priceTotal);
 int specialSearchListPrint(PosRe head, char* numFrom, char* numTo);
 int specialSearch(PosRe head, PosRe* indexer, int length);
@@ -67,6 +67,8 @@ int simpleQuestionAction(char* question);
 int freeArticle(PosArt head);
 int freeReceipt(PosRe head);
 int fillIndexer(PosRe head, PosRe** indexer, int* lengthP);
+int fileSortReload(PosRe head, int sortReceipt, int sortArticle);
+int printAllReceipts(PosRe head);
 
 
 int main()
@@ -78,17 +80,26 @@ int main()
 
 	fileLoader(head, "racuni.txt");
 
-	fillIndexer(head, &indexer, &length);
+	//fillIndexer(head, &indexer, &length);
 
+
+	//specialSearch(head, indexer, length);
+
+	printAllReceipts(head);
+	fileSortReload(head, -1, -1);
+	printf("\n");
+	printAllReceipts(head);
 	
-
-	// int status = 0;
-	// if ((status = readEngine("racuni.txt")) < 0) return status;
-
-	specialSearch(head, indexer, length);
-
 	return 0;
 }
+
+int printAllReceipts(PosRe head)
+{
+	printf("\n");
+	for (PosRe curr = head->next; curr != NULL; curr = curr->next) printReceipt(curr);
+	return 0;
+}
+
 
 // Dodan je indexer, ideja je koristiti ga za tipa printanje datuma uzastopno, zbog jednostavnijeg biranja, te normalnije unaprijed alocirane memorije za tipa matchList i drugo
 
@@ -96,22 +107,59 @@ int fillIndexer(PosRe head, PosRe** indexer, int* lengthP)
 {
 	int length = 1;
 
-	for(PosRe curr = head->next; curr != NULL; curr = curr->next )
+	for (PosRe curr = head->next; curr != NULL; curr = curr->next)
 	{
 		PosRe* temp = (PosRe*)realloc(*indexer, length * sizeof(PosRe));
-		
-		if(temp == NULL) 
+
+		if (temp == NULL)
 		{
 			printf("Greska pri alokaciji memorije! (fillIndexer)");
 			return MEM_ALLOC_ERR;
 		}
 		*indexer = temp;
-		
+
 		(*indexer)[length - 1] = curr;
 		length++;
 	}
 	*lengthP = length - 1;
 	return 0;
+}
+
+int fileSortReload(PosRe head, int sortReceipt, int sortArticle)
+{
+	PosRe currReceipt = head->next, nextReceipt = NULL;
+	head->next = NULL;
+
+	while(currReceipt != NULL)
+	{
+		PosArt headArticles = currReceipt->articles;
+		PosArt currArticle = headArticles->next, nextArticle = NULL;
+
+		headArticles->next = NULL;
+
+		while (currArticle != NULL)
+		{
+			nextArticle = currArticle->next;
+			currArticle->next = NULL;
+
+			insertArticle(headArticles, currArticle, sortArticle);
+
+			currArticle = nextArticle;
+		}
+
+
+		nextReceipt = currReceipt->next;
+		currReceipt->next = NULL;
+
+		insertRecipe(head, currReceipt, sortReceipt);
+
+		currReceipt = nextReceipt;
+
+
+		
+	}
+	return 0;
+
 }
 
 
@@ -138,7 +186,7 @@ int fileLoader(PosRe head, char* filename)
 	int status = 0;
 
 	// Dodaj obicnu listu sa svim racunima za printanje datuma i toga
-	
+
 	int length = 0;
 
 	while (fgets(buffer, MAX_BUFFER, file) != NULL)
@@ -187,7 +235,7 @@ PosRe makeReceipt(char* dateBuffer)
 	// Mijenjan iz identincnog makeHeadReceiptu da stavlja datum sam
 
 	char* tempDate = (char*)malloc(strlen(dateBuffer) * sizeof(char) + 1);
-	
+
 
 	if (tempDate == NULL)
 	{
@@ -260,8 +308,9 @@ int insertElementArticle(PosArt rec1, PosArt rec2)
 }
 
 // Sortira racune prema datumu
-int insertRecipe(PosRe head, PosRe inserted)
+int insertRecipe(PosRe head, PosRe inserted, int sortReceipt)
 {
+	
 	if (head == NULL || inserted == NULL)
 	{
 		printf("Greska s argumentima! (insertReceipt)");
@@ -269,7 +318,7 @@ int insertRecipe(PosRe head, PosRe inserted)
 	}
 
 	PosRe curr = head;
-	while (curr->next != NULL && (strcmp(curr->next->date, inserted->date)) < 0) curr = curr->next;
+	while (curr->next != NULL && (sortReceipt * strcmp(curr->next->date, inserted->date)) < 0) curr = curr->next;
 
 	int status = 0;
 	if ((status = insertElementReceipt(curr, inserted)) < 0) return status;
@@ -278,8 +327,9 @@ int insertRecipe(PosRe head, PosRe inserted)
 
 }
 
+// Dodano da zbraja istoimena artikle
 // Sortira artikle prema nazivu
-int insertArticle(PosArt head, PosArt article)
+int insertArticle(PosArt head, PosArt article, int sortArticles)
 {
 	if (head == NULL || article == NULL)
 	{
@@ -287,10 +337,20 @@ int insertArticle(PosArt head, PosArt article)
 		return ARG_ERR;
 	}
 
-	PosArt curr = head;
-	while (curr->next != NULL && (strcmp(curr->next->name, article->name)) < 0) curr = curr->next;
-
 	int status = 0;
+	PosArt curr = head;
+	while (curr->next != NULL && (status = (sortArticles * strcmp(curr->next->name, article->name)))  <= 0)
+	{
+		if(status == 0)
+		{
+			curr->next->amount += article->amount;
+			free(article->name);
+			free(article);
+			return 0;
+		}
+
+		curr = curr->next;
+	}
 	if ((status = insertElementArticle(curr, article)) < 0) return status;
 
 	return 0;
@@ -299,6 +359,7 @@ int insertArticle(PosArt head, PosArt article)
 // Cita Racun i artikle iz filea
 int readReceipt(char* filename, PosRe head)
 {
+	int sortReceipt = 1, sortArticle = 1;
 	if (filename == NULL || head == NULL)
 	{
 		printf("Greska s argumentima! (readReceipt)");
@@ -323,10 +384,9 @@ int readReceipt(char* filename, PosRe head)
 
 	int status = 0;
 
-	if ((status = insertRecipe(head, receipt)) < 0)
+	if ((status = insertRecipe(head, receipt, sortReceipt)) < 0)
 	{
-		free(receipt->date);
-		free(receipt);
+		freeReceipt(head);
 		fclose(file);
 		return status;
 	}
@@ -349,7 +409,7 @@ int readReceipt(char* filename, PosRe head)
 			return MEM_ALLOC_ERR;
 		}
 
-		if ((status = insertArticle(receipt->articles, article)) < 0)
+		if ((status = insertArticle(receipt->articles, article, sortArticle)) < 0)
 		{
 			fclose(file);
 			freeReceipt(head);
@@ -369,11 +429,11 @@ int printDates(PosRe head)
 		printf("Greska s argumentima! (printDates)");
 		return ARG_ERR;
 	}
-	
+
 	int index = 0;
 
 	printf("Ispisujem popis datuma! :\n");
-	for (PosRe curr = head->next; curr != NULL; curr = curr->next) printf("%d. %s\n",index++ + 1, curr->date);
+	for (PosRe curr = head->next; curr != NULL; curr = curr->next) printf("%d. %s\n", index++ + 1, curr->date);
 	printf("-----------------------\n");
 	return 0;
 
@@ -395,21 +455,18 @@ int checkChoiceValidity(PosRe head, char* choice, int length, PosRe* indexer)
 		printf("Odaberite broj!\n");
 		return 0;
 	}
-	else if (choiceNum <= 0 || choiceNum > length) 
+	else if (choiceNum <= 0 || choiceNum > length)
 	{
 		printf("Odaberite broj unutar trazenog raspona!\n");
 		return 0;
 	}
-	/*
-	char* chosen = indexer[choiceNum - 1]->date;
-
-	for (PosRe curr = head->next; curr != NULL; curr = curr->next) if (strcmp(chosen, curr->date) == 0) return (choiceNum);*/
 
 	return (choiceNum);
 }
 
-
+// Mijenjana ideja iza simpleQuestionAction
 // Gradi jednostavna pitanja za d/n odgovore
+
 int simpleQuestionAction(char* question)
 {
 	if (question == NULL)
@@ -419,10 +476,17 @@ int simpleQuestionAction(char* question)
 	}
 
 	char doAction = '\0';
-	printf(question);
-	scanf(" %c", &doAction);
+	while (1)
+	{
 
-	if (doAction == 'd') return 500;
+		printf(question);
+
+		scanf(" %c", &doAction);
+
+		if (doAction == 'd' || doAction == 'D') return 500;
+		else if (doAction == 'n' || doAction == 'N') return 0;
+
+	}
 	return 0;
 }
 
@@ -444,7 +508,7 @@ int checkDateCompatibility(char** to, char** from)
 	{
 		printf("Testiram promjenu umjesto greske!");
 
-		
+
 		*to = dateFrom;
 		*from = dateTo;
 
@@ -467,17 +531,18 @@ int specialSearchListPrint(PosRe head, char* numFrom, char* numTo)
 	printf("Koji artikal trazite? \n");
 	scanf("%s", trazeno);
 
-	printf("Prikazuje se pronadeni podatci za razdoblje (%s) - (%s)\n", numFrom, numTo);
+	
 
 	int size = 0;
 	PosRe* matchList = makeMatchList(head, numFrom, numTo, &size, trazeno);
 
 	if (matchList == NULL)
 	{
-		printf("Doslo je do greske pri trazenju! Nije pronaden ni jedan isti artikal u racunima! Gasenje programa!\n");
+		printf("Nije pronaden niti jedan artikal! Gasim program!\n");
 		return USR_ERR;
 	}
 
+	printf("Prikazuje se pronadeni podatci za razdoblje (%s) - (%s)\n", numFrom, numTo);
 
 	int status = 0;
 	if ((status = printTotal(matchList, size, trazeno)) < 0) return status;
@@ -503,20 +568,19 @@ char* choiceEngine(PosRe head, PosRe* indexer, int length)
 	{
 		scanf("%s", choice);
 		// Izmjena provjere iz samo datuma u broj, kako bi datum mogao izaci iz vezane liste ne iz ispisa, index izlazi iz checkChoiceValidity
-		
+
 
 		if ((isValid = checkChoiceValidity(head, choice, length, indexer)) < 0) return NULL;
 
-		printf("%d", isValid);
 		if (isValid >= 1) break;
-		
+
 	}
-	
-	
 
-	char* returnedValue = indexer[isValid-1]->date;
 
-	
+
+	char* returnedValue = indexer[isValid - 1]->date;
+
+
 
 	return returnedValue;
 }
@@ -548,6 +612,7 @@ int specialSearch(PosRe head, PosRe* indexer, int length)
 
 			while (1)
 			{
+				puts("\n");
 				printf("Od: \n");
 
 				numFrom = choiceEngine(head, indexer, length);
