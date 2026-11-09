@@ -42,9 +42,11 @@ typedef struct _Receipt
 
 PosRe makeHeadReceipt();
 PosArt makeHeadArticle();
-int fileLoader(PosRe head, char** filenames, int length);
-int readReceipt(char* filename, PosRe Receipt);
-PosRe makeReceipt(char* dateBuffer);
+int fileLoader(PosRe head, char** filenames, int length, PosArt** articleIndexer);
+int readReceipt(char* filename, PosRe head, PosArt** articleIndex, int index);
+PosRe makeReceipt(char* dateBuffer, int index, PosArt** articleIndex);
+
+
 int insertRecipe(PosRe head, PosRe inserted, int sortReceiptP);
 int insertElementReceipt(PosRe rec1, PosRe rec2);
 int insertElementArticle(PosArt rec1, PosArt rec2);
@@ -70,7 +72,11 @@ int fillIndexer(PosRe head, PosRe** indexer, int* lengthP);
 int fileSortReload(PosRe head, int sortReceipt, int sortArticle);
 int printAllReceipts(PosRe head);
 
-int saveReceipt();
+int deleteReceipt(PosRe* head);
+
+
+int saveReceipt(PosRe head, char** filenames, PosArt* articleIndex, int length);
+
 
 
 char** filenameLoader(char* filename, int* length);
@@ -95,6 +101,7 @@ int main()
 
 	PosRe* indexer = NULL;
 	int receiptCount = 0;
+	PosArt* articleIndex = NULL;
 
 	/*fillIndexer(head, &indexer, &length);
 
@@ -111,11 +118,33 @@ int main()
 	// printAllReceipts(head);
 	*/
 	char** filenames = filenameLoader("racuni.txt", &receiptCount);
-	fileLoader(head, filenames, receiptCount);
+	fileLoader(head, filenames, receiptCount, &articleIndex);
 
 	fileSortReload(head, -1, -1);
 	printAllReceipts(head);
 
+	saveReceipt(head, filenames, articleIndex, receiptCount);
+
+
+	return 0;
+}
+
+int saveReceipt(PosRe head, char** filenames, PosArt* articleIndex, int length)
+{
+	for (int i = 0; i < length; i++)
+	{
+		PosRe curr = head->next;
+		while (curr != NULL)
+		{
+			if (curr->articles == articleIndex[i])
+			{
+				printf("%s : %s\n", filenames[i], curr->date);
+				// Dodaj da ga ocisti kad ga nade;
+				break;
+			}
+			curr = curr->next;
+		}
+	}
 	return 0;
 }
 
@@ -221,7 +250,7 @@ int fileSortReload(PosRe head, int sortReceipt, int sortArticle)
 }
 // Mijenja logiku , filenameovi iz racuni.txt dolaze iz odvojene funkciju
 
-int fileLoader(PosRe head, char** filenames, int length)
+int fileLoader(PosRe head, char** filenames, int length, PosArt** articleIndexer)
 {
 	if (filenames == NULL || head == NULL)
 	{
@@ -236,7 +265,7 @@ int fileLoader(PosRe head, char** filenames, int length)
 	for(int i = 0; i < length; i++)
 	{
 
-		if ((status = readReceipt(filenames[i], head)) < 0)
+		if ((status = readReceipt(filenames[i], head, articleIndexer , i+1)) < 0)
 		{
 			freeReceipt(head);
 			return status;
@@ -269,12 +298,11 @@ PosArt makeHeadArticle()
 }
 
 // Stvara prazan Receipt
-PosRe makeReceipt(char* dateBuffer)
+PosRe makeReceipt(char* dateBuffer, int index, PosArt** articleIndex)
 {
 	// Mijenjan iz identincnog makeHeadReceiptu da stavlja datum sam
-
+	
 	char* tempDate = (char*)malloc(strlen(dateBuffer) * sizeof(char) + 1);
-
 
 	if (tempDate == NULL)
 	{
@@ -285,8 +313,20 @@ PosRe makeReceipt(char* dateBuffer)
 	sscanf(dateBuffer, "%s", tempDate);
 
 	PosRe receipt = makeHeadReceipt();
+	PosArt* tempBuffer = (PosArt*)realloc(*articleIndex, sizeof(PosArt) * index);
+
+	if(tempBuffer == NULL)
+	{
+		printf("Greksa pri alokaciji!");
+		return NULL;
+	}
+
+	*articleIndex = tempBuffer;
 
 	receipt->articles = makeHeadArticle();
+
+	(*articleIndex)[index - 1] = receipt->articles;
+
 	receipt->next = NULL;
 	receipt->date = tempDate;
 	return receipt;
@@ -395,7 +435,7 @@ int insertArticle(PosArt head, PosArt article, int sortArticles)
 }
 
 // Cita Racun i artikle iz filea
-int readReceipt(char* filename, PosRe head)
+int readReceipt(char* filename, PosRe head, PosArt** articleIndex, int index)
 {
 	int sortReceipt = 1, sortArticle = 1;
 	if (filename == NULL || head == NULL)
@@ -416,7 +456,7 @@ int readReceipt(char* filename, PosRe head)
 
 	fgets(buffer, MAX_BUFFER, file);
 
-	PosRe receipt = makeReceipt(buffer);
+	PosRe receipt = makeReceipt(buffer, index, articleIndex);
 
 	int status = 0;
 
