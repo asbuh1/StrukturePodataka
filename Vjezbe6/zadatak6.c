@@ -42,7 +42,7 @@ typedef struct _Receipt
 
 PosRe makeHeadReceipt();
 PosArt makeHeadArticle();
-int fileLoader(PosRe head, char* filename);
+int fileLoader(PosRe head, char** filenames, int length);
 int readReceipt(char* filename, PosRe Receipt);
 PosRe makeReceipt(char* dateBuffer);
 int insertRecipe(PosRe head, PosRe inserted, int sortReceiptP);
@@ -72,6 +72,8 @@ int printAllReceipts(PosRe head);
 
 int saveReceipt();
 
+
+char** filenameLoader(char* filename, int* length);
 // Ocisceno svo freeanje zbog lakseg kontroliranja nakon nadogradnje
 
 int main()
@@ -92,11 +94,9 @@ int main()
 	PosRe head = makeHeadReceipt();
 
 	PosRe* indexer = NULL;
-	int length = 0;
-	int fileAmount = 0;
+	int receiptCount = 0;
 
-	fileLoader(head, "racuni.txt");
-	fillIndexer(head, &indexer, &length);
+	/*fillIndexer(head, &indexer, &length);
 
 	printf("%s\n", indexer[0]->date);
 
@@ -109,8 +109,50 @@ int main()
 	// fileSortReload(head, -1, -1);
 	printf("\n");
 	// printAllReceipts(head);
-	
+	*/
+	char** filenames = filenameLoader("racuni.txt", &receiptCount);
+	fileLoader(head, filenames, receiptCount);
+
+	fileSortReload(head, -1, -1);
+	printAllReceipts(head);
+
 	return 0;
+}
+
+char** filenameLoader(char* filename, int* length) 
+{
+	FILE* file = fopen(filename, "r");
+
+	char buffer[MAX_BUFFER] = { 0 };
+	char readBuffer[MAX_BUFFER] = { 0 };
+
+	char* temp = NULL;
+	char** tempFilenames = NULL;
+	char** filenames = NULL;
+	int receiptCount = 0;
+
+	while (fgets(buffer, MAX_BUFFER, file) != NULL)
+	{
+
+		receiptCount++;
+
+		sscanf(buffer, "%s", readBuffer);
+
+		temp = (char*)malloc(strlen(readBuffer) + 1);
+		tempFilenames = (char**)realloc(filenames, receiptCount * sizeof(char*));
+
+		strcpy(temp, readBuffer);
+
+		if(tempFilenames == NULL)
+		{
+			printf("Greska pri alokaciji memorije!");
+			return NULL;
+		}
+		filenames = tempFilenames;
+		filenames[receiptCount - 1] = temp;
+	}
+	*length = receiptCount;
+	return filenames;
 }
 
 
@@ -177,47 +219,30 @@ int fileSortReload(PosRe head, int sortReceipt, int sortArticle)
 	return 0;
 
 }
+// Mijenja logiku , filenameovi iz racuni.txt dolaze iz odvojene funkciju
 
-
-int fileLoader(PosRe head, char* filename)
+int fileLoader(PosRe head, char** filenames, int length)
 {
-	if (filename == NULL)
+	if (filenames == NULL || head == NULL)
 	{
 		printf("Greska s argumentima! (readEngine)");
 		return ARG_ERR;
 	}
 
-	FILE* file = fopen(filename, "r");
-
-	if (file == NULL)
-	{
-		printf("Greska pri otvaranju filea! (readEngine)");
-		return FILE_ERR;
-	}
-
-	char buffer[MAX_BUFFER] = { 0 };
-
 	int status = 0;
 
 	// Dodaj obicnu listu sa svim racunima za printanje datuma i toga
 
-	int length = 0;
-
-	while (fgets(buffer, MAX_BUFFER, file) != NULL)
+	for(int i = 0; i < length; i++)
 	{
-		length++;
-		char filenameBuffer[MAX_BUFFER] = { 0 };
-		sscanf(buffer, "%s", filenameBuffer);
 
-		if ((status = readReceipt(filenameBuffer, head)) < 0)
+		if ((status = readReceipt(filenames[i], head)) < 0)
 		{
-			fclose(file);
 			freeReceipt(head);
 			return status;
 		}
 	}
 
-	fclose(file);
 	return 0;
 
 }
