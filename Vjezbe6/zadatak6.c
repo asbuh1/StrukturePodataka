@@ -71,27 +71,36 @@ int fileSortReload(PosRe head, int sortReceipt, int sortArticle);
 int printAllReceipts(PosRe head);
 
 
+// Ocisceno svo freeanje zbog lakseg kontroliranja nakon nadogradnje
+
 int main()
 {
 	PosRe head = makeHeadReceipt();
 
 	PosRe* indexer = NULL;
 	int length = 0;
+	int fileAmount = 0;
+
+	
 
 	fileLoader(head, "racuni.txt");
+	fillIndexer(head, &indexer, &length);
 
-	//fillIndexer(head, &indexer, &length);
+	printf("%s\n", indexer[0]->date);
 
-
-	//specialSearch(head, indexer, length);
-
-	printAllReceipts(head);
 	fileSortReload(head, -1, -1);
+	fillIndexer(head, &indexer, &length);
+	printf("%s\n", indexer[0]->date);
+
+	specialSearch(head, indexer, length);
+
+	// fileSortReload(head, -1, -1);
 	printf("\n");
-	printAllReceipts(head);
+	// printAllReceipts(head);
 	
 	return 0;
 }
+
 
 int printAllReceipts(PosRe head)
 {
@@ -99,9 +108,6 @@ int printAllReceipts(PosRe head)
 	for (PosRe curr = head->next; curr != NULL; curr = curr->next) printReceipt(curr);
 	return 0;
 }
-
-
-// Dodan je indexer, ideja je koristiti ga za tipa printanje datuma uzastopno, zbog jednostavnijeg biranja, te normalnije unaprijed alocirane memorije za tipa matchList i drugo
 
 int fillIndexer(PosRe head, PosRe** indexer, int* lengthP)
 {
@@ -163,8 +169,6 @@ int fileSortReload(PosRe head, int sortReceipt, int sortArticle)
 }
 
 
-// Pomaknut head u main zasad -> poslije pomakni u run, fileLoader samo ucitaju racune iz filea
-// Gradi vezanu listu racuna, zove loop za trazenje artikala po racunima
 int fileLoader(PosRe head, char* filename)
 {
 	if (filename == NULL)
@@ -630,8 +634,6 @@ int specialSearch(PosRe head, PosRe* indexer, int length)
 				*/
 				if (isCompatible == 0) break;
 
-				free(numFrom);
-				free(numTo);
 			}
 		}
 
@@ -647,8 +649,6 @@ int specialSearch(PosRe head, PosRe* indexer, int length)
 		if (status == 500) remember = 1;
 
 	}
-	free(numFrom);
-	free(numTo);
 	return 0;
 }
 
