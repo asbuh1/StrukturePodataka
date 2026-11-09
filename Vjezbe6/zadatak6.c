@@ -70,18 +70,30 @@ int fillIndexer(PosRe head, PosRe** indexer, int* lengthP);
 int fileSortReload(PosRe head, int sortReceipt, int sortArticle);
 int printAllReceipts(PosRe head);
 
+int saveReceipt();
 
 // Ocisceno svo freeanje zbog lakseg kontroliranja nakon nadogradnje
 
 int main()
 {
+	/*
+	1. Uredite racun - spremaj preko liste koja ce se napraviti pri pocetnom pokretanju, imat ce imena svih fileova i istovremeno jedan sa svim article headovima pointerima, poslije ce traziti sve to dok ne slozi pocetni racuni nazad i ispisati ih kakve ih je file ostavio
+	2. Postavke Sortiranja
+	3. Trazenje racuna
+	4. Ispis racuna
+	5. Izlaz
+	
+	1. - ispisuje sve racune - Trazi da bira racun po indesku - n. broj po indeksu artikla, bira se indeks, ako je n+1 novi element, ako postojeci trazi kolicinu pa cijenu
+	2. - Rastuce/Padajuce - odvojeno za artikle i datume - Po imenima/Po cijeni
+	3. - 1. Trazenje specificnog artikla, 2. Ispisi top 3 najskuplja racuna 3. Filtriranje po cijeni
+	4. - printAllReceipts
+	*/
+
 	PosRe head = makeHeadReceipt();
 
 	PosRe* indexer = NULL;
 	int length = 0;
 	int fileAmount = 0;
-
-	
 
 	fileLoader(head, "racuni.txt");
 	fillIndexer(head, &indexer, &length);
@@ -161,8 +173,6 @@ int fileSortReload(PosRe head, int sortReceipt, int sortArticle)
 
 		currReceipt = nextReceipt;
 
-
-		
 	}
 	return 0;
 
