@@ -72,13 +72,10 @@ int fillIndexer(PosRe head, PosRe** indexer, int* lengthP);
 int fileSortReload(PosRe head, int sortReceipt, int sortArticle);
 int printAllReceipts(PosRe head);
 
-int deleteReceipt(PosRe* head);
 
-
+int totalPriceIndex(int** totalPrice, PosRe* firstIndex, int length);
 int saveReceipt(PosRe head, char** filenames, PosArt* articleIndex, int length);
-
-
-
+int fileSaveReceipt(PosRe receipt, char* filename);
 char** filenameLoader(char* filename, int* length);
 // Ocisceno svo freeanje zbog lakseg kontroliranja nakon nadogradnje
 
@@ -90,7 +87,7 @@ int main()
 	3. Trazenje racuna
 	4. Ispis racuna
 	5. Izlaz
-	
+
 	1. - ispisuje sve racune - Trazi da bira racun po indesku - n. broj po indeksu artikla, bira se indeks, ako je n+1 novi element, ako postojeci trazi kolicinu pa cijenu
 	2. - Rastuce/Padajuce - odvojeno za artikle i datume - Po imenima/Po cijeni
 	3. - 1. Trazenje specificnog artikla, 2. Ispisi top 3 najskuplja racuna 3. Filtriranje po cijeni
@@ -102,7 +99,7 @@ int main()
 	PosRe* indexer = NULL;
 	int receiptCount = 0;
 	PosArt* articleIndex = NULL;
-
+	int length = 0;
 	/*fillIndexer(head, &indexer, &length);
 
 	printf("%s\n", indexer[0]->date);
@@ -120,35 +117,96 @@ int main()
 	char** filenames = filenameLoader("racuni.txt", &receiptCount);
 	fileLoader(head, filenames, receiptCount, &articleIndex);
 
-	fileSortReload(head, -1, -1);
+	fillIndexer(head, &indexer, &length);
+
+
+	fileSortReload(head, -1, 1);
 	printAllReceipts(head);
 
+	int* totalPrice = NULL;
+	totalPriceIndex(&totalPrice, indexer, length);
+
+	printf("\n");
+	// fileSaveReceipt(indexer[1], "LOLOLOL.txt");
 	saveReceipt(head, filenames, articleIndex, receiptCount);
 
+	printf("TESTING: %d", totalPrice[1]);
+
+}
+
+int totalPriceIndex(int** totalPrice, PosRe* firstIndex, int length)
+{
+	int* temp = NULL;
+	printf("%d", length);
+	temp = (int*)malloc(sizeof(int) * length);
+
+	if (temp == NULL)
+	{
+		printf("Greska pri alokaciji!");
+		return MEM_ALLOC_ERR;
+	}
+
+	*totalPrice = temp;
+
+	for (int i = 0; i < length; i++)
+	{
+		PosArt curr = firstIndex[i]->articles->next;
+		(*totalPrice)[i] = 0;
+		while (curr != NULL)
+		{
+			(*totalPrice)[i] += curr->price;
+			curr = curr->next;
+		}
+	}
 
 	return 0;
 }
+
+int fileSaveReceipt(PosRe receipt, char* filename)
+{
+	FILE* file = fopen(filename, "w");
+
+	fprintf(file, receipt->date);
+	fputc('\n', file);
+
+	for (PosArt curr = receipt->articles->next; curr != NULL; curr = curr->next)
+	{
+		fprintf(file, "%s %d %d\n", curr->name, curr->amount, curr->price);
+	}
+	fclose(file);
+	return 0;
+}
+
 
 int saveReceipt(PosRe head, char** filenames, PosArt* articleIndex, int length)
 {
 	for (int i = 0; i < length; i++)
 	{
+		PosRe back = head;
 		PosRe curr = head->next;
 		while (curr != NULL)
 		{
 			if (curr->articles == articleIndex[i])
 			{
 				printf("%s : %s\n", filenames[i], curr->date);
-				// Dodaj da ga ocisti kad ga nade;
+				back->next = curr->next;
+
+				fileSaveReceipt(curr, filenames[i]);
+
+				freeArticle(curr->articles);
+				free(curr->date);
+				free(curr);
 				break;
 			}
+
+			back = curr;
 			curr = curr->next;
 		}
 	}
 	return 0;
 }
 
-char** filenameLoader(char* filename, int* length) 
+char** filenameLoader(char* filename, int* length)
 {
 	FILE* file = fopen(filename, "r");
 
@@ -172,7 +230,7 @@ char** filenameLoader(char* filename, int* length)
 
 		strcpy(temp, readBuffer);
 
-		if(tempFilenames == NULL)
+		if (tempFilenames == NULL)
 		{
 			printf("Greska pri alokaciji memorije!");
 			return NULL;
@@ -219,7 +277,7 @@ int fileSortReload(PosRe head, int sortReceipt, int sortArticle)
 	PosRe currReceipt = head->next, nextReceipt = NULL;
 	head->next = NULL;
 
-	while(currReceipt != NULL)
+	while (currReceipt != NULL)
 	{
 		PosArt headArticles = currReceipt->articles;
 		PosArt currArticle = headArticles->next, nextArticle = NULL;
@@ -262,10 +320,10 @@ int fileLoader(PosRe head, char** filenames, int length, PosArt** articleIndexer
 
 	// Dodaj obicnu listu sa svim racunima za printanje datuma i toga
 
-	for(int i = 0; i < length; i++)
+	for (int i = 0; i < length; i++)
 	{
 
-		if ((status = readReceipt(filenames[i], head, articleIndexer , i+1)) < 0)
+		if ((status = readReceipt(filenames[i], head, articleIndexer, i + 1)) < 0)
 		{
 			freeReceipt(head);
 			return status;
@@ -301,7 +359,7 @@ PosArt makeHeadArticle()
 PosRe makeReceipt(char* dateBuffer, int index, PosArt** articleIndex)
 {
 	// Mijenjan iz identincnog makeHeadReceiptu da stavlja datum sam
-	
+
 	char* tempDate = (char*)malloc(strlen(dateBuffer) * sizeof(char) + 1);
 
 	if (tempDate == NULL)
@@ -315,7 +373,7 @@ PosRe makeReceipt(char* dateBuffer, int index, PosArt** articleIndex)
 	PosRe receipt = makeHeadReceipt();
 	PosArt* tempBuffer = (PosArt*)realloc(*articleIndex, sizeof(PosArt) * index);
 
-	if(tempBuffer == NULL)
+	if (tempBuffer == NULL)
 	{
 		printf("Greksa pri alokaciji!");
 		return NULL;
@@ -389,7 +447,7 @@ int insertElementArticle(PosArt rec1, PosArt rec2)
 // Sortira racune prema datumu
 int insertRecipe(PosRe head, PosRe inserted, int sortReceipt)
 {
-	
+
 	if (head == NULL || inserted == NULL)
 	{
 		printf("Greska s argumentima! (insertReceipt)");
@@ -417,9 +475,9 @@ int insertArticle(PosArt head, PosArt article, int sortArticles)
 
 	int status = 0;
 	PosArt curr = head;
-	while (curr->next != NULL && (status = (sortArticles * strcmp(curr->next->name, article->name)))  <= 0)
+	while (curr->next != NULL && (status = (sortArticles * strcmp(curr->next->name, article->name))) <= 0)
 	{
-		if(status == 0)
+		if (status == 0)
 		{
 			curr->next->amount += article->amount;
 			free(article->name);
@@ -599,7 +657,7 @@ int specialSearchListPrint(PosRe head, char* numFrom, char* numTo)
 	printf("Koji artikal trazite? \n");
 	scanf("%s", trazeno);
 
-	
+
 
 	int size = 0;
 	PosRe* matchList = makeMatchList(head, numFrom, numTo, &size, trazeno);
