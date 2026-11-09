@@ -331,7 +331,6 @@ int insertRecipe(PosRe head, PosRe inserted, int sortReceipt)
 
 }
 
-// Dodano da zbraja istoimena artikle
 // Sortira artikle prema nazivu
 int insertArticle(PosArt head, PosArt article, int sortArticles)
 {
@@ -382,8 +381,6 @@ int readReceipt(char* filename, PosRe head)
 
 	fgets(buffer, MAX_BUFFER, file);
 
-	// Pomakni stvaranje date filea u makeReceipt
-
 	PosRe receipt = makeReceipt(buffer);
 
 	int status = 0;
@@ -394,8 +391,6 @@ int readReceipt(char* filename, PosRe head)
 		fclose(file);
 		return status;
 	}
-
-	// Prebaceno stvaranje tempa -> articleheada u MakeReceipt
 
 	while (fgets(buffer, MAX_BUFFER, file) != NULL)
 	{
@@ -443,7 +438,6 @@ int printDates(PosRe head)
 
 }
 
-
 // Provjerava postoji li korisnikov odabir datuma
 int checkChoiceValidity(PosRe head, char* choice, int length, PosRe* indexer)
 {
@@ -468,7 +462,6 @@ int checkChoiceValidity(PosRe head, char* choice, int length, PosRe* indexer)
 	return (choiceNum);
 }
 
-// Mijenjana ideja iza simpleQuestionAction
 // Gradi jednostavna pitanja za d/n odgovore
 
 int simpleQuestionAction(char* question)
@@ -494,8 +487,6 @@ int simpleQuestionAction(char* question)
 	return 0;
 }
 
-
-// Promijenjen checkDateCompatiblity da ispravlja format ako mu se ne svida
 // Provjerava kakvi su datumi u odnosu jedan na drugog
 int checkDateCompatibility(char** to, char** from)
 {
@@ -512,7 +503,6 @@ int checkDateCompatibility(char** to, char** from)
 	{
 		printf("Testiram promjenu umjesto greske!");
 
-
 		*to = dateFrom;
 		*from = dateTo;
 
@@ -520,7 +510,6 @@ int checkDateCompatibility(char** to, char** from)
 
 	return 0;
 }
-
 
 // Ispisuje listu sa trazenim artiklima
 int specialSearchListPrint(PosRe head, char* numFrom, char* numTo)
@@ -556,7 +545,6 @@ int specialSearchListPrint(PosRe head, char* numFrom, char* numTo)
 	return 0;
 }
 
-// Promjeni princip mijenjanja da radi s indexiranim datumima umjesto gluposti sa pisanjem cijelog datuma: n. datum
 // Sluzi za biranje datuma
 char* choiceEngine(PosRe head, PosRe* indexer, int length)
 {
@@ -571,8 +559,6 @@ char* choiceEngine(PosRe head, PosRe* indexer, int length)
 	while (1)
 	{
 		scanf("%s", choice);
-		// Izmjena provjere iz samo datuma u broj, kako bi datum mogao izaci iz vezane liste ne iz ispisa, index izlazi iz checkChoiceValidity
-
 
 		if ((isValid = checkChoiceValidity(head, choice, length, indexer)) < 0) return NULL;
 
@@ -580,11 +566,7 @@ char* choiceEngine(PosRe head, PosRe* indexer, int length)
 
 	}
 
-
-
 	char* returnedValue = indexer[isValid - 1]->date;
-
-
 
 	return returnedValue;
 }
@@ -625,13 +607,7 @@ int specialSearch(PosRe head, PosRe* indexer, int length)
 
 				if (numFrom == NULL || numTo == NULL) return MEM_ALLOC_ERR;
 
-				// Promjenjena logika da ih ispravlja!
-
 				int isCompatible = checkDateCompatibility(&numTo, &numFrom);
-
-				/*int isCompatible = checkDateCompatibility(numTo, numFrom);
-				if (isCompatible < 0) return isCompatible;
-				*/
 				if (isCompatible == 0) break;
 
 			}
@@ -643,7 +619,6 @@ int specialSearch(PosRe head, PosRe* indexer, int length)
 
 		if ((status = simpleQuestionAction("\nZelite li ponovno pokrenuti program? d/n: \n")) < 0) return status;
 		if (status != 500) break;
-
 
 		if ((status = simpleQuestionAction("\nZelite li zapamtiti raspon brojeva? d/n: \n")) < 0) return status;
 		if (status == 500) remember = 1;
@@ -730,7 +705,6 @@ PosRe* makeMatchList(PosRe head, char* from, char* to, int* size, char* item)
 
 	return matchList;
 }
-
 
 // Ispisuje listu sa trazenim artiklima
 int printMatchList(PosRe* matchList, int size)
