@@ -80,6 +80,10 @@ char** filenameLoader(char* filename, int* length);
 // Ocisceno svo freeanje zbog lakseg kontroliranja nakon nadogradnje
 
 int editReceipt(PosRe** indexer, int length, int* totalPrice, int* totalArticles);
+int filterByPrice(int* totalPrice, int length, PosRe* index);
+int findMax(int* totalPrice, int length, PosRe* index);
+int findMostUniqueArticles(int length, PosRe* index, int* totalArticles);
+
 
 
 int main()
@@ -119,11 +123,16 @@ int main()
 	char** filenames = filenameLoader("racuni.txt", &receiptCount);
 	fileLoader(head, filenames, receiptCount, &articleIndex);
 	
-	int* totalArticles;
+	fileSortReload(head, 1, 3);
+	printAllReceipts(head);
+
+	int* totalArticles = NULL;
 	int* totalPrice = NULL;
 	fillIndexer(head, &indexer, receiptCount, &totalPrice, &totalArticles);
-
-
+	// filterByPrice(totalPrice, receiptCount, indexer);
+	findMax(totalPrice, receiptCount, indexer);
+	findMostUniqueArticles(receiptCount, indexer, totalArticles);
+	/*
 	fileSortReload(head, 1, 1);
 	printAllReceipts(head);
 
@@ -133,7 +142,59 @@ int main()
 	
 	editReceipt(&indexer, receiptCount, totalPrice, totalArticles);
 	//printAllReceipts(head);
-	saveReceipt(head, filenames, articleIndex, receiptCount);
+	saveReceipt(head, filenames, articleIndex, receiptCount); */
+}
+
+int findMostUniqueArticles(int length, PosRe* index, int* totalArticles)
+{
+	int max = 0;
+
+	for (int i = 1; i < length; i++)
+	{
+		if (totalArticles[max] < totalArticles[i]) max = i;
+	}
+
+	printf("\nIspisujem racun sa najvise razlicith artikala!\n");
+	printReceipt(index[max]);
+	return 0;
+}
+
+int findMax(int* totalPrice, int length, PosRe* index)
+{
+	int max = 0;
+
+	for(int i = 1; i < length; i++)
+	{
+		if (totalPrice[max] < totalPrice[i]) max = i;
+	}
+
+	printf("\nIspisujem najskuplji racun!\n");
+	printReceipt(index[max]);
+	return 0;
+}
+
+int filterByPrice(int* totalPrice, int length, PosRe* index)
+{
+	int max = 0, min = 0;
+
+	printf("\nIzaberite najmanju cijenu: \n");
+	scanf("%d", &min);
+	printf("Dodajte najvecu cijenu: \n");
+	scanf("%d", &max);
+	
+	printf("Ispisujem sve racune sa odgovorajucim cijenama!\n");
+
+	for(int i = 0; i < length; i++)
+	{
+		int price = totalPrice[i];
+		if(price >= min && price <= max)
+		{
+			printReceipt(index[i]);
+			printf("\nUkupno: %d\n", price);
+		}
+	}
+
+	return 0;
 }
 
 int editReceipt(PosRe** indexer, int length, int* totalPrice, int* totalArticles)
@@ -367,8 +428,6 @@ int printAllReceipts(PosRe head)
 	return 0;
 }
 
-
-
 int fileSortReload(PosRe head, int sortReceipt, int sortArticle)
 {
 	PosRe currReceipt = head->next, nextReceipt = NULL;
@@ -572,17 +631,38 @@ int insertArticle(PosArt head, PosArt article, int sortArticles)
 
 	int status = 0;
 	PosArt curr = head;
-	while (curr->next != NULL && (status = (sortArticles * strcmp(curr->next->name, article->name))) <= 0)
-	{
-		if (status == 0)
-		{
-			curr->next->amount += article->amount;
-			free(article->name);
-			free(article);
-			return 0;
-		}
 
-		curr = curr->next;
+	if (sortArticles == 3) 
+	{
+
+		while (curr->next != NULL && (curr->next->price < article->price))
+		{
+			curr = curr->next;
+		}
+	}
+	else if (sortArticles == 4)
+	{
+
+		while (curr->next != NULL && (curr->next->price > article->price))
+		{
+			curr = curr->next;
+		}
+	}
+
+	else 
+	{
+		while (curr->next != NULL && (status = (sortArticles * strcmp(curr->next->name, article->name))) <= 0)
+		{
+			if (status == 0)
+			{
+				curr->next->amount += article->amount;
+				free(article->name);
+				free(article);
+				return 0;
+			}
+
+			curr = curr->next;
+		}
 	}
 	if ((status = insertElementArticle(curr, article)) < 0) return status;
 
