@@ -68,16 +68,19 @@ int simpleSearch(PosArt head, char* item);
 int simpleQuestionAction(char* question);
 int freeArticle(PosArt head);
 int freeReceipt(PosRe head);
-int fillIndexer(PosRe head, PosRe** indexer, int* lengthP);
+
 int fileSortReload(PosRe head, int sortReceipt, int sortArticle);
 int printAllReceipts(PosRe head);
+  
 
-
-int totalPriceIndex(int** totalPrice, PosRe* firstIndex, int length);
+int fillIndexer(PosRe head, PosRe** indexer, int length, int** totalPrice, int** totalArticles);
 int saveReceipt(PosRe head, char** filenames, PosArt* articleIndex, int length);
 int fileSaveReceipt(PosRe receipt, char* filename);
 char** filenameLoader(char* filename, int* length);
 // Ocisceno svo freeanje zbog lakseg kontroliranja nakon nadogradnje
+
+int editReceipt(PosRe** indexer, int length, int* totalPrice, int* totalArticles);
+
 
 int main()
 {
@@ -99,7 +102,6 @@ int main()
 	PosRe* indexer = NULL;
 	int receiptCount = 0;
 	PosArt* articleIndex = NULL;
-	int length = 0;
 	/*fillIndexer(head, &indexer, &length);
 
 	printf("%s\n", indexer[0]->date);
@@ -116,49 +118,164 @@ int main()
 	*/
 	char** filenames = filenameLoader("racuni.txt", &receiptCount);
 	fileLoader(head, filenames, receiptCount, &articleIndex);
-
-	fillIndexer(head, &indexer, &length);
-
-
-	fileSortReload(head, -1, 1);
-	printAllReceipts(head);
-
+	
+	int* totalArticles;
 	int* totalPrice = NULL;
-	totalPriceIndex(&totalPrice, indexer, length);
+	fillIndexer(head, &indexer, receiptCount, &totalPrice, &totalArticles);
+
+
+	fileSortReload(head, 1, 1);
+	printAllReceipts(head);
 
 	printf("\n");
 	// fileSaveReceipt(indexer[1], "LOLOLOL.txt");
+	// printf("TESTING: %s : %d : %d\n", indexer[0]->date, totalPrice[0], totalArticles[0]);
+	
+	editReceipt(&indexer, receiptCount, totalPrice, totalArticles);
+	//printAllReceipts(head);
 	saveReceipt(head, filenames, articleIndex, receiptCount);
-
-	printf("TESTING: %d", totalPrice[1]);
-
 }
 
-int totalPriceIndex(int** totalPrice, PosRe* firstIndex, int length)
+int editReceipt(PosRe** indexer, int length, int* totalPrice, int* totalArticles)
 {
-	int* temp = NULL;
-	printf("%d", length);
-	temp = (int*)malloc(sizeof(int) * length);
 
-	if (temp == NULL)
+printf("Izaberite koji racun zelite urediti!:\n");
+printf("BR. DATUM BRRAZART UKCIJENA\n");
+for(int i = 0; i < length; i++)
+{
+	printf("%d. %s %d %d\n", i+1,(*indexer)[i]->date, totalArticles[i], totalPrice[i]);
+}
+
+printf("----------------------------\n");
+int choice = 0;
+scanf("%d", &choice);
+
+printf("Izabrali ste sljedeci racun!:\n");
+printf("br - uredi, > br - dodaj novi, 0 - izlaz\n");
+PosRe choiceRe = (*indexer)[choice - 1];
+printReceipt(choiceRe);
+puts("\n");
+
+length = totalArticles[choice - 1];
+scanf("%d", &choice);
+
+char buffer[MAX_BUFFER] = { 0 };
+char readBuffer[MAX_BUFFER] = { 0 };
+int intBuffer = 0;
+
+PosArt choiceArtHeadBack = choiceRe->articles;
+PosArt choiceArtHead = NULL;
+
+if((choice -1) < length && choice > 0)
+{
+	for(int i = 0; i < choice - 1;i++)
+	{
+		choiceArtHeadBack = choiceArtHeadBack->next;
+	}
+	choiceArtHead = choiceArtHeadBack->next;
+
+	choiceArtHeadBack->next = choiceArtHead->next;
+
+	printf("Naziv:\n");
+	scanf("%s", readBuffer);
+
+	free(choiceArtHead->name);
+
+	char* temp = (char*)malloc(strlen(readBuffer) + 1);
+	strcpy(temp, readBuffer);
+
+	choiceArtHead->name = temp;
+
+	printf("Kolicina:\n");
+	scanf("%d", &intBuffer);
+
+	choiceArtHead->amount = intBuffer;
+
+	printf("Cijena:\n");
+	scanf("%d", &intBuffer);
+
+	choiceArtHead->price = intBuffer;
+
+	insertArticle(choiceRe->articles, choiceArtHead, 1);
+}
+else if (choice > length)
+{
+	int br1 = 0, br2 = 0;
+	printf("Naziv:\n");
+	scanf("%s", readBuffer);
+
+	printf("Kolicina:\n");
+	scanf("%d", &br1);
+
+	printf("Cijena:\n");
+	scanf("%d", &br2);
+
+
+	PosArt newArticle = makeArticle(readBuffer, br2, br1);
+	
+
+	insertArticle(choiceRe->articles, newArticle, 1);
+}
+
+
+return 0;
+}
+
+
+// Mijenjana logika indexera u koristenje lengtha od filenameReadera
+int fillIndexer(PosRe head, PosRe** indexer, int length, int** totalPrice, int** totalArticles)
+{
+	PosRe* tempRec = (PosRe*)realloc(*indexer, length * sizeof(PosRe));
+	int * tempPrice = (int*)malloc(sizeof(int) * length);
+	int* tempArt = (int*)malloc(sizeof(int) * length);
+
+
+
+	if (tempRec == NULL)
 	{
 		printf("Greska pri alokaciji!");
 		return MEM_ALLOC_ERR;
 	}
-
-	*totalPrice = temp;
-
-	for (int i = 0; i < length; i++)
+	if(tempPrice == NULL)
 	{
-		PosArt curr = firstIndex[i]->articles->next;
-		(*totalPrice)[i] = 0;
-		while (curr != NULL)
-		{
-			(*totalPrice)[i] += curr->price;
-			curr = curr->next;
-		}
+		printf("Greska pri alokaciji!");
+		free(tempRec);
+		return MEM_ALLOC_ERR;
+	}
+	if (tempArt == NULL)
+	{
+		printf("Greska pri alokaciji!");
+		free(tempRec);
+		free(tempPrice);
+		return MEM_ALLOC_ERR;
 	}
 
+	*indexer = tempRec;
+	*totalPrice = tempPrice;
+	*totalArticles = tempArt;
+
+	int i = 0;
+	for (PosRe curr = head->next; curr != NULL; curr = curr->next)
+	{
+		(*indexer)[i] = curr;
+		PosArt currArt = curr->articles->next;
+		(*totalPrice)[i] = 0;
+		(*totalArticles)[i] = 0;
+
+		while (currArt != NULL)
+		{
+			
+			(*totalArticles) = tempArt;
+			(*totalArticles)[i]++;
+	
+
+			(*totalPrice)[i] += currArt->amount * currArt->price;
+			currArt = currArt->next;
+		}
+
+		i++;
+	}
+	
 	return 0;
 }
 
@@ -250,27 +367,7 @@ int printAllReceipts(PosRe head)
 	return 0;
 }
 
-int fillIndexer(PosRe head, PosRe** indexer, int* lengthP)
-{
-	int length = 1;
 
-	for (PosRe curr = head->next; curr != NULL; curr = curr->next)
-	{
-		PosRe* temp = (PosRe*)realloc(*indexer, length * sizeof(PosRe));
-
-		if (temp == NULL)
-		{
-			printf("Greska pri alokaciji memorije! (fillIndexer)");
-			return MEM_ALLOC_ERR;
-		}
-		*indexer = temp;
-
-		(*indexer)[length - 1] = curr;
-		length++;
-	}
-	*lengthP = length - 1;
-	return 0;
-}
 
 int fileSortReload(PosRe head, int sortReceipt, int sortArticle)
 {
