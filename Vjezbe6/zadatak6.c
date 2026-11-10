@@ -83,7 +83,7 @@ int editReceipt(PosRe** indexer, int length, int* totalPrice, int* totalArticles
 int filterByPrice(int* totalPrice, int length, PosRe* index);
 int findMax(int* totalPrice, int length, PosRe* index);
 int findMostUniqueArticles(int length, PosRe* index, int* totalArticles);
-
+int averageSpend(int length, int* totalPrice);
 
 
 int main()
@@ -132,6 +132,7 @@ int main()
 	// filterByPrice(totalPrice, receiptCount, indexer);
 	findMax(totalPrice, receiptCount, indexer);
 	findMostUniqueArticles(receiptCount, indexer, totalArticles);
+	averageSpend(receiptCount, totalPrice);
 	/*
 	fileSortReload(head, 1, 1);
 	printAllReceipts(head);
@@ -143,6 +144,18 @@ int main()
 	editReceipt(&indexer, receiptCount, totalPrice, totalArticles);
 	//printAllReceipts(head);
 	saveReceipt(head, filenames, articleIndex, receiptCount); */
+}
+
+int averageSpend(int length, int* totalPrice)
+{
+	int total = 0;
+for(int i = 0; i < length; i++)
+{
+	total += totalPrice[i];
+}
+double avg = (double)total / length;
+printf("\nProsjecna potrosnja po racunu je: %.2lf\n", avg);
+return 0;
 }
 
 int findMostUniqueArticles(int length, PosRe* index, int* totalArticles)
