@@ -58,7 +58,7 @@ int specialSearch(PosRe head, PosRe* indexer, int length);
 int printDates(PosRe head);
 int checkChoiceValidity(PosRe head, char* choice, int length, PosRe* indexer);
 char* choiceEngine(PosRe head, PosRe* indexer, int length);
-PosRe* makeMatchList(PosRe head, char* from, char* to, int* size, char* item);
+PosRe* makeMatchList(PosRe head, char* from, char* to, int* size, char* item, char use);
 int printMatchList(PosRe* matchList, int size);
 int printTotal(PosRe* matchList, int size, char* word);
 int printArticles(PosArt head);
@@ -68,7 +68,7 @@ int simpleSearch(PosArt head, char* item);
 int simpleQuestionAction(char* question);
 int freeArticle(PosArt head);
 int freeReceipt(PosRe head);
-
+int findMin(int* totalPrice, int length, PosRe* index);
 int fileSortReload(PosRe head, int sortReceipt, int sortArticle);
 int printAllReceipts(PosRe head);
   
@@ -84,7 +84,8 @@ int filterByPrice(int* totalPrice, int length, PosRe* index);
 int findMax(int* totalPrice, int length, PosRe* index);
 int findMostUniqueArticles(int length, PosRe* index, int* totalArticles);
 int averageSpend(int length, int* totalPrice);
-
+int totalArticlesPeriod(PosRe head, PosRe* indexer, int length);
+int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo);
 
 int main()
 {
@@ -114,25 +115,25 @@ int main()
 	fillIndexer(head, &indexer, &length);
 	printf("%s\n", indexer[0]->date);
 
-	specialSearch(head, indexer, length);
+	
 
 	// fileSortReload(head, -1, -1);
 	printf("\n");
 	// printAllReceipts(head);
 	*/
 	char** filenames = filenameLoader("racuni.txt", &receiptCount);
-	fileLoader(head, filenames, receiptCount, &articleIndex);
-	
-	fileSortReload(head, 1, 3);
-	printAllReceipts(head);
-
 	int* totalArticles = NULL;
 	int* totalPrice = NULL;
+
+	fileLoader(head, filenames, receiptCount, &articleIndex);
 	fillIndexer(head, &indexer, receiptCount, &totalPrice, &totalArticles);
+	printf(" br: %d\n", receiptCount);
+	totalArticlesPeriod(head, indexer, receiptCount);
+	
 	// filterByPrice(totalPrice, receiptCount, indexer);
-	findMax(totalPrice, receiptCount, indexer);
-	findMostUniqueArticles(receiptCount, indexer, totalArticles);
-	averageSpend(receiptCount, totalPrice);
+	// findMax(totalPrice, receiptCount, indexer);
+	// findMostUniqueArticles(receiptCount, indexer, totalArticles);
+	// averageSpend(receiptCount, totalPrice);
 	/*
 	fileSortReload(head, 1, 1);
 	printAllReceipts(head);
@@ -145,6 +146,176 @@ int main()
 	//printAllReceipts(head);
 	saveReceipt(head, filenames, articleIndex, receiptCount); */
 }
+
+// UK aritkli u periodu;
+
+int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo)
+{
+	int* amount = NULL;
+	char** articleName = NULL;
+	int length = 0;
+	int z = 0;
+
+	int* priceTot = NULL;
+	int* nOfUniqueMentions = NULL;
+
+	int* tempAmount = NULL;
+	char** tempArticleName = NULL;
+
+	int* tempTot = NULL;
+	int* tempNofUniq = NULL;
+
+	PosRe* matchList = makeMatchList(head, numFrom, numTo, &length, "fdf", 'i');
+
+
+
+	for(int i = 0; i < length; i++)
+	{
+		PosArt curr = matchList[i]->articles->next;
+		printf("%s", curr->name);
+		while (curr != NULL)
+		{
+			int flag = 0;
+			for(int b = 0; b < z; b++)
+			{
+				if (z == 0) break;
+
+
+				if (strcmp(articleName[b], curr->name) == 0)
+				{
+					
+					flag = 1;
+					amount[b] += curr->amount;
+					priceTot[b] += curr->price;
+					nOfUniqueMentions[b]++;
+					break;
+				}
+			}
+
+			if (flag == 0)
+			{
+				z++;
+				tempAmount = (int*)realloc(amount, sizeof(int) * z);
+
+				if(tempAmount == NULL)
+				{
+					printf("Greska pri alokaciji memorije! (totalArticlesPeriodFind)");
+					return MEM_ALLOC_ERR;
+				}
+
+				tempArticleName = (char**)realloc(articleName, sizeof(char*) * z);
+				if (tempArticleName == NULL)
+				{
+					printf("Greska pri alokaciji memorije! (totalArticlesPeriodFind)");
+					free(tempAmount);
+					return MEM_ALLOC_ERR;
+				}
+
+				tempNofUniq = (int*)realloc(nOfUniqueMentions, sizeof(int) * z);
+
+				if (tempNofUniq == NULL)
+				{
+					printf("Greska pri alokaciji memorije! (totalArticlesPeriodFind)");
+					free(tempAmount);
+					free(tempArticleName);
+					return MEM_ALLOC_ERR;
+				}
+
+				tempTot = (int*)realloc(priceTot, sizeof(int) * z);
+
+				if (tempTot == NULL)
+				{
+					printf("Greska pri alokaciji memorije! (totalArticlesPeriodFind)");
+					free(tempAmount);
+					free(tempArticleName);
+					free(tempNofUniq);
+					return MEM_ALLOC_ERR;
+				}
+
+
+				amount = tempAmount;
+				articleName = tempArticleName;
+
+				priceTot = tempTot;
+				nOfUniqueMentions = tempNofUniq;
+
+				amount[z - 1] = curr->amount;
+				articleName[z - 1] = curr->name;
+
+				priceTot[z - 1] = curr->price;
+				nOfUniqueMentions[z - 1] = 1;
+
+			}
+
+			curr = curr->next;
+		}
+	}
+
+	printf("\nPronadeni su sljedeci artikli za period (%s)-(%s)\n", numFrom, numTo);
+	printf("NAZIV KOL PROSJECNA CIJENA\n");
+	for(int i = 0; i < z; i++)
+	{
+		printf("%s %d %.2f\n", articleName[i], amount[i], (float)priceTot[i] / nOfUniqueMentions[i]);
+	}
+	return 0;
+}
+
+int totalArticlesPeriod(PosRe head, PosRe* indexer, int length)
+{
+	if (head == NULL)
+	{
+		printf("Greska s argumentima! (specialSearch)");
+		return ARG_ERR;
+	}
+
+	int remember = 0;
+	char* numFrom = NULL;
+	char* numTo = NULL;
+
+	while (1)
+	{
+		if (remember == 0)
+		{
+			int status = 0;
+			if ((status = printDates(head)) < 0) return status;
+
+			printf("Napisite razdoblje od kojeg zelite brojati!:");
+
+			numFrom = NULL;
+			numTo = NULL;
+
+			while (1)
+			{
+				puts("\n");
+				printf("Od: \n");
+
+				numFrom = choiceEngine(head, indexer, length);
+				printf("Do: \n");
+				numTo = choiceEngine(head, indexer, length);
+
+				if (numFrom == NULL || numTo == NULL) return MEM_ALLOC_ERR;
+
+				int isCompatible = checkDateCompatibility(&numTo, &numFrom);
+				if (isCompatible == 0) break;
+			}
+		}
+
+		totalArticlesPeriodFind(head, numFrom, numTo);
+
+		int status = 0;
+		remember = 0;
+
+		if ((status = simpleQuestionAction("\nZelite li ponovno pokrenuti program? d/n: \n")) < 0) return status;
+		if (status != 500) break;
+
+		if ((status = simpleQuestionAction("\nZelite li zapamtiti raspon brojeva? d/n: \n")) < 0) return status;
+		if (status == 500) remember = 1;
+
+	}
+	return 0;
+}
+
+
 
 int averageSpend(int length, int* totalPrice)
 {
@@ -171,6 +342,21 @@ int findMostUniqueArticles(int length, PosRe* index, int* totalArticles)
 	printReceipt(index[max]);
 	return 0;
 }
+
+int findMin(int* totalPrice, int length, PosRe* index)
+{
+	int min = 0;
+
+	for (int i = 1; i < length; i++)
+	{
+		if (totalPrice[min] > totalPrice[i]) min = i;
+	}
+
+	printf("\nIspisujem najjeftiniji racun!\n");
+	printReceipt(index[min]);
+	return 0;
+}
+
 
 int findMax(int* totalPrice, int length, PosRe* index)
 {
@@ -850,7 +1036,7 @@ int specialSearchListPrint(PosRe head, char* numFrom, char* numTo)
 
 
 	int size = 0;
-	PosRe* matchList = makeMatchList(head, numFrom, numTo, &size, trazeno);
+	PosRe* matchList = makeMatchList(head, numFrom, numTo, &size, trazeno, 's');
 
 	if (matchList == NULL)
 	{
@@ -932,7 +1118,6 @@ int specialSearch(PosRe head, PosRe* indexer, int length)
 
 				int isCompatible = checkDateCompatibility(&numTo, &numFrom);
 				if (isCompatible == 0) break;
-
 			}
 		}
 
@@ -993,23 +1178,29 @@ int search(PosArt head, char* searchName, int* count, int* priceTotal)
 }
 
 // Stvara listu sa trazenim artiklima
-PosRe* makeMatchList(PosRe head, char* from, char* to, int* size, char* item)
+PosRe* makeMatchList(PosRe head, char* from, char* to, int* size, char* item, char use)
 {
 	if (head == NULL || item == NULL || from == NULL || to == NULL || size == NULL)
 	{
 		printf("Greska s argumentima! (makeMatchList)");
 		return NULL;
 	}
-
+	
 	PosRe* matchList = NULL;
 	int counter = 0;
 	for (PosRe curr = head->next; curr != NULL; curr = curr->next)
 	{
-		int status = simpleSearch(curr->articles, item);
-		if (status < 0) return NULL;
+		int status = 0;
+		
+		if (use == 's') status = simpleSearch(curr->articles, item);
+		else status = 1;
 
+
+		if (status < 0) return NULL;
+		
 		if ((strcmp(from, curr->date) <= 0) && ((strcmp(to, curr->date) >= 0)) && status == 1)
 		{
+			
 			counter++;
 			PosRe* temp = (PosRe*)realloc(matchList, counter * sizeof(PosRe));
 			if (temp == NULL)
