@@ -68,7 +68,6 @@ int simpleSearch(PosArt head, char* item);
 int simpleQuestionAction(char* question);
 int freeArticle(PosArt head);
 int freeReceipt(PosRe head);
-int findMin(int* totalPrice, int length, PosRe* index);
 int fileSortReload(PosRe head, int sortReceipt, int sortArticle);
 int printAllReceipts(PosRe head);
   
@@ -81,11 +80,16 @@ char** filenameLoader(char* filename, int* length);
 
 int editReceipt(PosRe** indexer, int length, int* totalPrice, int* totalArticles);
 int filterByPrice(int* totalPrice, int length, PosRe* index);
-int findMax(int* totalPrice, int length, PosRe* index);
 int findMostUniqueArticles(int length, PosRe* index, int* totalArticles);
 int averageSpend(int length, int* totalPrice);
 int totalArticlesPeriod(PosRe head, PosRe* indexer, int length);
 int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo);
+
+int dateChoice(PosRe head, PosRe* indexer, int length, char** numFromP, char** numToP);
+int totalArticleAlloc(int** tempIndex, int size);
+int editReceiptInput(int* num1, int* num2, char* buffer);
+
+int findMinMax(int* totalPrice, int length, PosRe* index, char* minmax);
 
 int main()
 {
@@ -127,9 +131,14 @@ int main()
 
 	fileLoader(head, filenames, receiptCount, &articleIndex);
 	fillIndexer(head, &indexer, receiptCount, &totalPrice, &totalArticles);
-	printf(" br: %d\n", receiptCount);
-	totalArticlesPeriod(head, indexer, receiptCount);
-	
+	// specialSearch(head, indexer, receiptCount);
+
+	//totalArticlesPeriod(head, indexer, receiptCount);
+
+	findMinMax(totalPrice, receiptCount, indexer, "najjeftiniji");
+
+	// editReceipt(&indexer, receiptCount, totalPrice, totalArticles);
+	// saveReceipt(head, filenames, articleIndex, receiptCount);
 	// filterByPrice(totalPrice, receiptCount, indexer);
 	// findMax(totalPrice, receiptCount, indexer);
 	// findMostUniqueArticles(receiptCount, indexer, totalArticles);
@@ -144,10 +153,22 @@ int main()
 	
 	editReceipt(&indexer, receiptCount, totalPrice, totalArticles);
 	//printAllReceipts(head);
-	saveReceipt(head, filenames, articleIndex, receiptCount); */
+	 */
 }
 
 // UK aritkli u periodu;
+
+int totalArticleAlloc(int ** tempIndex, int size)
+{
+	int* temp = (int*)realloc(*tempIndex, sizeof(int) * size);
+
+	if (temp == NULL) return MEM_ALLOC_ERR;
+
+	*tempIndex = temp;
+
+	return 0;
+ 
+}
 
 int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo)
 {
@@ -166,8 +187,6 @@ int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo)
 	int* tempNofUniq = NULL;
 
 	PosRe* matchList = makeMatchList(head, numFrom, numTo, &length, "fdf", 'i');
-
-
 
 	for(int i = 0; i < length; i++)
 	{
@@ -195,13 +214,14 @@ int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo)
 			if (flag == 0)
 			{
 				z++;
-				tempAmount = (int*)realloc(amount, sizeof(int) * z);
+				totalArticleAlloc(&amount, z);
+				/*tempAmount = (int*)realloc(amount, sizeof(int) * z);
 
 				if(tempAmount == NULL)
 				{
 					printf("Greska pri alokaciji memorije! (totalArticlesPeriodFind)");
 					return MEM_ALLOC_ERR;
-				}
+				}*/
 
 				tempArticleName = (char**)realloc(articleName, sizeof(char*) * z);
 				if (tempArticleName == NULL)
@@ -211,7 +231,9 @@ int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo)
 					return MEM_ALLOC_ERR;
 				}
 
-				tempNofUniq = (int*)realloc(nOfUniqueMentions, sizeof(int) * z);
+				totalArticleAlloc(&nOfUniqueMentions, z);
+
+				/*tempNofUniq = (int*)realloc(nOfUniqueMentions, sizeof(int) * z);
 
 				if (tempNofUniq == NULL)
 				{
@@ -219,8 +241,10 @@ int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo)
 					free(tempAmount);
 					free(tempArticleName);
 					return MEM_ALLOC_ERR;
-				}
+				}*/
 
+				totalArticleAlloc(&priceTot, z);
+				/*
 				tempTot = (int*)realloc(priceTot, sizeof(int) * z);
 
 				if (tempTot == NULL)
@@ -230,14 +254,10 @@ int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo)
 					free(tempArticleName);
 					free(tempNofUniq);
 					return MEM_ALLOC_ERR;
-				}
+				}*/
 
-
-				amount = tempAmount;
 				articleName = tempArticleName;
-
-				priceTot = tempTot;
-				nOfUniqueMentions = tempNofUniq;
+				
 
 				amount[z - 1] = curr->amount;
 				articleName[z - 1] = curr->name;
@@ -260,6 +280,42 @@ int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo)
 	return 0;
 }
 
+int dateChoice(PosRe head, PosRe* indexer, int length, char ** numFromP, char** numToP)
+{
+		
+	int status = 0;
+	if ((status = printDates(head)) < 0) return status;
+
+	printf("Napisite razdoblje od kojeg zelite brojati!:");
+
+	char* numFrom = NULL;
+	char* numTo = NULL;
+
+	while (1)
+	{
+		free(numFrom);
+		free(numTo);
+
+		puts("\n");
+		printf("Od: \n");
+
+		numFrom = choiceEngine(head, indexer, length);
+		printf("Do: \n");
+		numTo = choiceEngine(head, indexer, length);
+
+		if (numFrom == NULL || numTo == NULL) return MEM_ALLOC_ERR;
+
+		int isCompatible = checkDateCompatibility(&numTo, &numFrom);
+		if (isCompatible == 0) break;
+	}
+
+	*numToP = numTo;
+	*numFromP = numFrom;
+
+	return 0;
+		
+}
+
 int totalArticlesPeriod(PosRe head, PosRe* indexer, int length)
 {
 	if (head == NULL)
@@ -276,28 +332,7 @@ int totalArticlesPeriod(PosRe head, PosRe* indexer, int length)
 	{
 		if (remember == 0)
 		{
-			int status = 0;
-			if ((status = printDates(head)) < 0) return status;
-
-			printf("Napisite razdoblje od kojeg zelite brojati!:");
-
-			numFrom = NULL;
-			numTo = NULL;
-
-			while (1)
-			{
-				puts("\n");
-				printf("Od: \n");
-
-				numFrom = choiceEngine(head, indexer, length);
-				printf("Do: \n");
-				numTo = choiceEngine(head, indexer, length);
-
-				if (numFrom == NULL || numTo == NULL) return MEM_ALLOC_ERR;
-
-				int isCompatible = checkDateCompatibility(&numTo, &numFrom);
-				if (isCompatible == 0) break;
-			}
+			dateChoice(head, indexer, length, &numFrom, &numTo);
 		}
 
 		totalArticlesPeriodFind(head, numFrom, numTo);
@@ -314,8 +349,6 @@ int totalArticlesPeriod(PosRe head, PosRe* indexer, int length)
 	}
 	return 0;
 }
-
-
 
 int averageSpend(int length, int* totalPrice)
 {
@@ -343,34 +376,25 @@ int findMostUniqueArticles(int length, PosRe* index, int* totalArticles)
 	return 0;
 }
 
-int findMin(int* totalPrice, int length, PosRe* index)
+
+int findMinMax(int* totalPrice, int length, PosRe* index, char* minmax)
 {
-	int min = 0;
-
-	for (int i = 1; i < length; i++)
+	int indexPrice = 0;
+	
+	if (strcmp("najskuplji", minmax) == 0)
 	{
-		if (totalPrice[min] > totalPrice[i]) min = i;
+		for (int i = 1; i < length; i++) if (totalPrice[indexPrice] < totalPrice[i]) indexPrice = i;
 	}
+	else if (strcmp("najjeftiniji", minmax) == 0)
+	{
+		for (int i = 1; i < length; i++) if (totalPrice[indexPrice] > totalPrice[i]) indexPrice = i;
+	}
+printf("\nIspisujem %s racun!\n", minmax);
+printReceipt(index[indexPrice]);
 
-	printf("\nIspisujem najjeftiniji racun!\n");
-	printReceipt(index[min]);
-	return 0;
+return 0;
 }
 
-
-int findMax(int* totalPrice, int length, PosRe* index)
-{
-	int max = 0;
-
-	for(int i = 1; i < length; i++)
-	{
-		if (totalPrice[max] < totalPrice[i]) max = i;
-	}
-
-	printf("\nIspisujem najskuplji racun!\n");
-	printReceipt(index[max]);
-	return 0;
-}
 
 int filterByPrice(int* totalPrice, int length, PosRe* index)
 {
@@ -396,6 +420,21 @@ int filterByPrice(int* totalPrice, int length, PosRe* index)
 	return 0;
 }
 
+int editReceiptInput(int * amount, int* price, char* buffer)
+{
+
+	printf("Naziv:\n");
+	scanf("%s", buffer);
+
+	printf("Kolicina:\n");
+	scanf("%d", amount);
+
+	printf("Cijena:\n");
+	scanf("%d", price);
+
+	return 0;
+}
+
 int editReceipt(PosRe** indexer, int length, int* totalPrice, int* totalArticles)
 {
 
@@ -407,8 +446,11 @@ for(int i = 0; i < length; i++)
 }
 
 printf("----------------------------\n");
+printf("0 - izlaz\n\n");
 int choice = 0;
 scanf("%d", &choice);
+
+if (choice == 0) return 0;
 
 printf("Izabrali ste sljedeci racun!:\n");
 printf("br - uredi, > br - dodaj novi, 0 - izlaz\n");
@@ -432,51 +474,32 @@ if((choice -1) < length && choice > 0)
 	{
 		choiceArtHeadBack = choiceArtHeadBack->next;
 	}
+
 	choiceArtHead = choiceArtHeadBack->next;
-
 	choiceArtHeadBack->next = choiceArtHead->next;
-
-	printf("Naziv:\n");
-	scanf("%s", readBuffer);
-
 	free(choiceArtHead->name);
+
+	int tempAmount = 0, tempPrice = 0;
+
+	editReceiptInput(&tempAmount, &tempPrice, readBuffer);
 
 	char* temp = (char*)malloc(strlen(readBuffer) + 1);
 	strcpy(temp, readBuffer);
 
-	choiceArtHead->name = temp;
-
-	printf("Kolicina:\n");
-	scanf("%d", &intBuffer);
-
-	choiceArtHead->amount = intBuffer;
-
-	printf("Cijena:\n");
-	scanf("%d", &intBuffer);
-
-	choiceArtHead->price = intBuffer;
-
+	choiceArtHead->name = temp, choiceArtHead->amount = tempAmount, choiceArtHead->price = tempPrice;
+	
 	insertArticle(choiceRe->articles, choiceArtHead, 1);
 }
 else if (choice > length)
 {
-	int br1 = 0, br2 = 0;
-	printf("Naziv:\n");
-	scanf("%s", readBuffer);
+	int tempAmount = 0, tempPrice = 0;
 
-	printf("Kolicina:\n");
-	scanf("%d", &br1);
+	editReceiptInput(&tempAmount, &tempPrice, readBuffer);
 
-	printf("Cijena:\n");
-	scanf("%d", &br2);
-
-
-	PosArt newArticle = makeArticle(readBuffer, br2, br1);
+	PosArt newArticle = makeArticle(readBuffer, tempPrice, tempAmount);
 	
-
 	insertArticle(choiceRe->articles, newArticle, 1);
 }
-
 
 return 0;
 }
@@ -488,8 +511,6 @@ int fillIndexer(PosRe head, PosRe** indexer, int length, int** totalPrice, int**
 	PosRe* tempRec = (PosRe*)realloc(*indexer, length * sizeof(PosRe));
 	int * tempPrice = (int*)malloc(sizeof(int) * length);
 	int* tempArt = (int*)malloc(sizeof(int) * length);
-
-
 
 	if (tempRec == NULL)
 	{
@@ -525,10 +546,7 @@ int fillIndexer(PosRe head, PosRe** indexer, int length, int** totalPrice, int**
 		while (currArt != NULL)
 		{
 			
-			(*totalArticles) = tempArt;
 			(*totalArticles)[i]++;
-	
-
 			(*totalPrice)[i] += currArt->amount * currArt->price;
 			currArt = currArt->next;
 		}
@@ -710,10 +728,9 @@ PosArt makeHeadArticle()
 	return tempHead;
 }
 
-// Stvara prazan Receipt
+// Stvara prazan Receipt i sprema head artikla u indeks artikla
 PosRe makeReceipt(char* dateBuffer, int index, PosArt** articleIndex)
 {
-	// Mijenjan iz identincnog makeHeadReceiptu da stavlja datum sam
 
 	char* tempDate = (char*)malloc(strlen(dateBuffer) * sizeof(char) + 1);
 
@@ -1010,7 +1027,6 @@ int checkDateCompatibility(char** to, char** from)
 
 	if (strcmp(dateFrom, dateTo) > 0)
 	{
-		printf("Testiram promjenu umjesto greske!");
 
 		*to = dateFrom;
 		*from = dateTo;
@@ -1097,28 +1113,7 @@ int specialSearch(PosRe head, PosRe* indexer, int length)
 	{
 		if (remember == 0)
 		{
-			int status = 0;
-			if ((status = printDates(head)) < 0) return status;
-
-			printf("Napisite razdoblje od kojeg zelite brojati!:");
-
-			numFrom = NULL;
-			numTo = NULL;
-
-			while (1)
-			{
-				puts("\n");
-				printf("Od: \n");
-
-				numFrom = choiceEngine(head, indexer, length);
-				printf("Do: \n");
-				numTo = choiceEngine(head, indexer, length);
-
-				if (numFrom == NULL || numTo == NULL) return MEM_ALLOC_ERR;
-
-				int isCompatible = checkDateCompatibility(&numTo, &numFrom);
-				if (isCompatible == 0) break;
-			}
+			dateChoice(head, indexer, length, &numFrom, &numTo);
 		}
 
 		int status = 0;
@@ -1192,9 +1187,7 @@ PosRe* makeMatchList(PosRe head, char* from, char* to, int* size, char* item, ch
 	{
 		int status = 0;
 		
-		if (use == 's') status = simpleSearch(curr->articles, item);
-		else status = 1;
-
+		status = (use == 's') ? simpleSearch(curr->articles, item) : 1;
 
 		if (status < 0) return NULL;
 		
