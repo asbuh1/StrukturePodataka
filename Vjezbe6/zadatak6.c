@@ -47,7 +47,7 @@ int readReceipt(char* filename, PosRe head, PosArt** articleIndex, int index);
 PosRe makeReceipt(char* dateBuffer, int index, PosArt** articleIndex);
 
 
-int insertRecipe(PosRe head, PosRe inserted, int sortReceiptP);
+int insertRecipe(PosRe head, PosRe inserted, int sortReceipt, int* totalPrice);
 int insertElementReceipt(PosRe rec1, PosRe rec2);
 int insertElementArticle(PosArt rec1, PosArt rec2);
 PosArt makeArticle(char* name, int price, int amount);
@@ -70,7 +70,7 @@ int freeArticles(PosArt head);
 int freeArticle(PosArt ad);
 int freeReceipts(PosRe head);
 int freeReceipt(PosRe ad);
-int fileSortReload(PosRe head, int sortReceipt, int sortArticle);
+int fileSortReload(PosRe head, int sortReceipt, int sortArticle, int* totalPrice);
 int printAllReceipts(PosRe head);
   
 
@@ -78,7 +78,6 @@ int fillIndexer(PosRe head, PosRe** indexer, int length, int** totalPrice, int**
 int saveReceipt(PosRe head, char** filenames, PosArt* articleIndex, int length);
 int fileSaveReceipt(PosRe receipt, char* filename);
 char** filenameLoader(char* filename, int* length);
-// Ocisceno svo freeanje zbog lakseg kontroliranja nakon nadogradnje
 
 int editReceipt(PosRe** indexer, int length, int* totalPrice, int* totalArticles);
 int filterByPrice(int* totalPrice, int length, PosRe* index);
@@ -93,72 +92,357 @@ int editReceiptInput(int* num1, int* num2, char* buffer);
 int findMinMax(int* totalIndex, int length, PosRe* index, int isMax, char* wanted);
 
 int callError(int code, char* location);
+int runInit(char* masterFile);
+int runEngine();
+int outerMenu(PosRe head, PosRe** indexer, int length, int** totalPrice, int** totalArticles, int* sortArticles, int* sortReceipts);
+int printMenu(char** menuList, int size);
+int getNumChoice();
+
+int menuChoice(int size);
+int actionMenu(PosRe* indexer, PosRe head, int length, int* totalPrice, int* totalArticles);
+int filterSettings(PosRe head, int* articleSort, int* receiptSort, int** totalPrice, int** totalArticles, PosRe** indexer, int length);
+int freeAll(char*** filenames, int receiptCount, PosRe** indexer, PosArt** articleIndexer, int** totalArticles, int** totalPrice, PosRe* head);
 
 int main()
 {
-	/*
-	1. Uredite racun - spremaj preko liste koja ce se napraviti pri pocetnom pokretanju, imat ce imena svih fileova i istovremeno jedan sa svim article headovima pointerima, poslije ce traziti sve to dok ne slozi pocetni racuni nazad i ispisati ih kakve ih je file ostavio
-	2. Postavke Sortiranja
-	3. Trazenje racuna
-	4. Ispis racuna
-	5. Izlaz
+	return runInit("racuni.txt");
+}
 
-	1. - ispisuje sve racune - Trazi da bira racun po indesku - n. broj po indeksu artikla, bira se indeks, ako je n+1 novi element, ako postojeci trazi kolicinu pa cijenu
-	2. - Rastuce/Padajuce - odvojeno za artikle i datume - Po imenima/Po cijeni
-	3. - 1. Trazenje specificnog artikla, 2. Ispisi top 3 najskuplja racuna 3. Filtriranje po cijeni
-	4. - printAllReceipts
-	*/
-
-	PosRe head = makeHeadReceipt();
-
-	PosRe* indexer = NULL;
-	int receiptCount = 0;
-	PosArt* articleIndex = NULL;
-	/*fillIndexer(head, &indexer, &length);
-
-	printf("%s\n", indexer[0]->date);
-
-	fileSortReload(head, -1, -1);
-	fillIndexer(head, &indexer, &length);
-	printf("%s\n", indexer[0]->date);
-
+int printMenu(char** menuList, int size)
+{
 	
-
-	// fileSortReload(head, -1, -1);
-	printf("\n");
-	// printAllReceipts(head);
-	*/
-	char** filenames = filenameLoader("racuni.txt", &receiptCount);
-	int* totalArticles = NULL;
-	int* totalPrice = NULL;
-
-	fileLoader(head, filenames, receiptCount, &articleIndex);
-	fillIndexer(head, &indexer, receiptCount, &totalPrice, &totalArticles);
-	// specialSearch(head, indexer, receiptCount);
-
-	//totalArticlesPeriod(head, indexer, receiptCount);
-
-
-	// editReceipt(&indexer, receiptCount, totalPrice, totalArticles);
-	// saveReceipt(head, filenames, articleIndex, receiptCount);
-	// filterByPrice(totalPrice, receiptCount, indexer);
-	// findMax(totalPrice, receiptCount, indexer);
-	// findMostUniqueArticles(receiptCount, indexer, totalArticles);
-	// averageSpend(receiptCount, totalPrice);
-	/*
-	fileSortReload(head, 1, 1);
-	printAllReceipts(head);
-
-	printf("\n");
-	// fileSaveReceipt(indexer[1], "LOLOLOL.txt");
-	// printf("TESTING: %s : %d : %d\n", indexer[0]->date, totalPrice[0], totalArticles[0]);
+	printf("\n--------------------\n");
+	for (int i = 0; i < (size); i++)printf("%d. %s\n", i + 1, menuList[i]);
+	printf("0. Izlaz\n");
+	printf("--------------------\n: ");
 	
-	editReceipt(&indexer, receiptCount, totalPrice, totalArticles);
-	//printAllReceipts(head);
-	 */
+	
+	return 0;
+}
+
+int menuChoice(int size)
+{
+	if (size <= 0) return 0;
+	int choice = 0;
+	
+	while(1)
+	{
+		choice = getNumChoice();
+		if (choice >= 0 && choice < size + 1) break;
+		printf("Unesite broj unutar indeksa!: ");
+	}
+	return choice;
 }
 
 // UK aritkli u periodu;
+
+int runInit(char* masterFile)
+{
+	PosRe head = makeHeadReceipt();
+	PosRe* indexer = NULL;
+	int receiptCount = 0;
+	PosArt* articleIndex = NULL;
+
+	char** filenames = filenameLoader(masterFile, &receiptCount);
+	int* totalArticles = NULL;
+	int* totalPrice = NULL;
+	int status = 0;
+
+
+	int sortArticles = 1, sortReceipts = 1;
+	fileLoader(head, filenames, receiptCount, &articleIndex);
+	fillIndexer(head, &indexer, receiptCount, &totalPrice, &totalArticles);
+
+
+	status = outerMenu(head, &indexer, receiptCount, &totalPrice, &totalArticles, &sortArticles, &sortReceipts);
+	if (status == 1) saveReceipt(head, filenames, articleIndex, receiptCount);
+
+	freeAll(&filenames, receiptCount, &indexer, &articleIndex, &totalArticles, &totalPrice, &head);
+	return (status < 0) ? status : 0;
+}
+
+int freeAll(char*** filenames, int receiptCount, PosRe** indexer, PosArt** articleIndexer, int** totalArticles, int** totalPrice, PosRe* head)
+{
+	char** tempFilenames = *filenames;
+	for(int i = 0; i < receiptCount; i++) free(tempFilenames[i]);
+	free(*filenames);
+	free(*indexer);
+	free(*articleIndexer);
+	free(*totalArticles);
+	free(*totalPrice);
+	freeReceipts(*head);
+	return 0;
+}
+
+
+int runEngine() 
+{
+	return 0;
+}
+
+
+int outerMenu(PosRe head, PosRe ** indexer, int length, int ** totalPrice, int ** totalArticles, int* sortArticles, int* sortReceipts)
+{
+	char* menuList[] = { "Uredi", "Pretrazi", "Ispisi Sve", "Postavke Filtriranja"};
+	
+	int size = (int)sizeof(menuList) / (int)sizeof(menuList[0]);;
+
+
+
+	printMenu(menuList, size);
+	printf("\n");
+	int choice = menuChoice(size);
+	
+	int status = 0;
+
+	switch (choice)
+	{
+	case 1:
+		status = editReceipt(indexer, length, *totalPrice, *totalArticles);
+		if (status == 0)
+		{
+			fillIndexer(head, indexer, length, totalPrice, totalArticles);
+			fileSortReload(head, *sortReceipts, *sortArticles, *totalPrice);
+			fillIndexer(head, indexer, length, totalPrice, totalArticles);
+		}
+		getchar();
+		break;
+	case 2:
+		actionMenu(*indexer, head, length, *totalPrice, *totalArticles);
+		getchar();
+		break;
+	case 3:
+		status = printAllReceipts(head);
+		break;
+	case 4:
+		status = filterSettings(head, sortArticles, sortReceipts, totalPrice, totalArticles, indexer, length);
+		break;
+	default:
+		status = 1;
+		break;
+	}
+
+	if (status == 0)
+	{
+		outerMenu(head, indexer, length, totalPrice, totalArticles, sortArticles, sortReceipts);
+	}
+	
+	return status;
+}
+
+int actionMenu(PosRe * indexer, PosRe head, int length, int* totalPrice, int* totalArticles)
+{
+	char* menuList[] = {"Pretrazi po datumima", "Pretrazi po cijeni ili artiklima"};
+	int size = (int)sizeof(menuList) / (int)sizeof(menuList[0]);;
+
+	char* dateMenu[] = { "Potrosnja na artikal", "Prosjecna potrosnja na aritkal" };
+	int sizeMenu = (int)sizeof(dateMenu) / (int)sizeof(dateMenu[0]);
+
+	char* priceArtMenu[] = { "Prosjecna potrosnja", "Najskuplji racun", "Najjeftiniji racun", "Najvise razlicitih artikala", "Najmanje razlicitih artikala"};
+	int sizeArtMennu = (int)sizeof(priceArtMenu) / (int)sizeof(priceArtMenu[0]);
+	int status = 0;
+
+	printMenu(menuList, size);
+	int lowerChoice = 0;
+	int choice = menuChoice(size);
+
+	switch(choice)
+	{
+	case 1:
+		printMenu(dateMenu, sizeMenu);
+		lowerChoice = menuChoice(sizeMenu);
+		switch(lowerChoice)
+		{
+		case 1:
+			status = specialSearch(head, indexer, length);
+			break;
+		case 2:
+			status = totalArticlesPeriod(head, indexer, length);
+			break;
+		default:
+			break;
+		}
+		break;
+	case 2:
+		printMenu(priceArtMenu, sizeArtMennu);
+		lowerChoice = menuChoice(sizeArtMennu);
+		switch(lowerChoice)
+		{
+		case 1:
+			status = averageSpend(length, totalPrice);
+			break;
+		case 2:
+			status = findMinMax(totalPrice, length, indexer, 1, "Najskuplji racun");
+			break;
+		case 3:
+			status = findMinMax(totalPrice, length, indexer, 0, "Najjeftiniji racun");
+			break;
+		case 4:
+			status = findMinMax(totalArticles, length, indexer, 1, "Racun s najvise razlicitih artikala");
+			break;
+		case 5:
+			status = findMinMax(totalArticles, length, indexer, 0, "Racun s najmanje razlicith arikala");
+			break;
+		default:
+			break;
+		}
+		break;
+	default:
+		break;
+	}
+
+	return status;
+}
+
+int filterSettings(PosRe head, int* articleSort, int* receiptSort, int** totalPrice, int** totalArticles, PosRe** indexer, int length)
+{
+	char* menu[] = {"Racun", "Artikli"};
+	int sizeMain = (int)sizeof(menu) / (int)sizeof(menu[0]);
+
+
+	char* menuAscDesc[] = {"Uzlazno (A-Z) (0-1)", "Silazno (Z-A) (1-0)"};
+	int sizeAscDesc = (int)sizeof(menuAscDesc) / (int)sizeof(menuAscDesc[0]);
+
+	char* menuArticle[] = {"Naziv", "Kolicina", "Pojedinacna cijena"};
+	int sizeMenuArticle = (int)sizeof(menuArticle) / (int)sizeof(menuArticle[0]);
+
+	char* menuReceipt[] = { "Datum", "Cijena" };
+	int sizeMenuReceipt = (int)sizeof(menuReceipt) / (int)sizeof(menuReceipt[0]);
+
+	int lowerChoice = 0;
+	int lowestChoice = 0;
+	printf("Postavke Filtriranja");
+	printMenu(menu, sizeMain);
+	int choice = menuChoice(sizeMain);
+	int status = 0;
+	switch (choice)
+	{
+
+	case 1:
+		printf("\nMoguce filtriranje Po\n");
+		printMenu(menuReceipt, sizeMenuReceipt);
+		lowerChoice = menuChoice(sizeMenuReceipt);
+
+		switch (lowerChoice)
+		{
+		case 1:
+			printf("Filtriranje po Datumu:");
+			printMenu(menuAscDesc, sizeAscDesc);
+
+			lowestChoice = menuChoice(sizeAscDesc);
+			switch (lowestChoice)
+			{
+			case 1:
+				*receiptSort = 1;
+				status = fileSortReload(head, *receiptSort, *articleSort, *totalPrice);
+				break;
+			case 2:
+				*receiptSort = -1;
+				status = fileSortReload(head, *receiptSort, *articleSort, *totalPrice);
+				break;
+			default:
+				break;
+			}
+			break;
+
+		case 2:
+			printf("Filtriranje po cijeni:");
+			printMenu(menuAscDesc, sizeAscDesc);
+			lowestChoice = menuChoice(sizeAscDesc);
+
+			switch (lowestChoice)
+			{
+			case 1:
+				*receiptSort = 3;
+				status = fileSortReload(head, *receiptSort, *articleSort, *totalPrice);
+				break;
+			case 2:
+				*receiptSort = 4;
+				status = fileSortReload(head, *receiptSort, *articleSort, *totalPrice);
+				break;
+			default:
+				break;
+			}
+		default:
+			break;
+		}
+		break;
+
+	case 2:
+		printf("\nMoguce filtriranje Po\n");
+		printMenu(menuArticle, sizeMenuArticle);
+		lowerChoice = menuChoice(sizeMenuArticle);
+		switch (lowerChoice)
+		{
+		case 1:
+			printf("Filtriranje po nazivu:");
+			printMenu(menuAscDesc, sizeAscDesc);
+
+			lowestChoice = menuChoice(sizeAscDesc);
+
+			switch (lowestChoice)
+			{
+			case 1:
+				*articleSort = 1;
+				status = fileSortReload(head, *receiptSort, *articleSort, *totalPrice);
+				break;
+			case 2:
+				*articleSort = -1;
+				status = fileSortReload(head, *receiptSort, *articleSort, *totalPrice);
+				break;
+			default:
+				break;
+			}
+			break;
+		case 2:
+			printf("Filtriranje po kolicini:");
+			printMenu(menuAscDesc, sizeAscDesc);
+			lowestChoice = menuChoice(sizeAscDesc);
+
+			switch (lowestChoice)
+			{
+			case 1:
+				*articleSort = 5;
+				status = fileSortReload(head, *receiptSort, *articleSort, *totalPrice);
+				break;
+			case 2:
+				*articleSort = 6;
+				status = fileSortReload(head, *receiptSort, *articleSort, *totalPrice);
+				break;
+			default:
+				break;
+			}
+			break;
+		case 3:
+			printf("Filtriranje po pojedinacnoj cijeni:");
+			printMenu(menuAscDesc, sizeAscDesc);
+			lowestChoice = menuChoice(sizeAscDesc);
+
+			switch (lowestChoice)
+			{
+			case 1:
+				*articleSort = 3;
+				status = fileSortReload(head, *receiptSort, *articleSort, *totalPrice);
+				break;
+			case 2:
+				*articleSort = 4;
+				status = fileSortReload(head, *receiptSort, *articleSort, *totalPrice);
+				break;
+			default:
+				break;
+			}
+			break;
+
+
+		default:
+			break;
+		}
+	default:
+		break;
+	}
+	fillIndexer(head, indexer, length, totalPrice, totalArticles);
+	return status;
+}
 
 // Greske
 int callError(int code, char* location)
@@ -178,10 +462,8 @@ int callError(int code, char* location)
 		printf("Greska s podatcima!(%s)\n", location);
 		return USR_ERR;
 	default:
-		break;
+		return 0;
 	}
-
-	return 0;
 
 }
 
@@ -221,7 +503,6 @@ int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo)
 	for(int i = 0; i < length; i++)
 	{
 		PosArt curr = matchList[i]->articles->next;
-		printf("%s", curr->name);
 		while (curr != NULL)
 		{
 			int flag = 0;
@@ -284,6 +565,12 @@ int totalArticlesPeriodFind(PosRe head, char* numFrom, char* numTo)
 		printf("%s %d %.2f\n", articleName[i], amount[i], (float)priceTot[i] / nOfUniqueMentions[i]);
 	}
 
+	free(articleName);
+	free(amount);
+	free(priceTot);
+	free(nOfUniqueMentions);
+	free(matchList);
+
 	return 0;
 }
 
@@ -342,12 +629,7 @@ int totalArticlesPeriod(PosRe head, PosRe* indexer, int length)
 			if((status = dateChoice(head, indexer, length, &numFrom, &numTo)) < 0) callError(status, funcName);
 		}
 
-		if ((status = totalArticlesPeriodFind(head, numFrom, numTo)) < 0)
-		{
-			free(numFrom);
-			free(numTo);
-			callError(status, funcName);
-		}
+		if ((status = totalArticlesPeriodFind(head, numFrom, numTo)) < 0) callError(status, funcName);
 
 		remember = 0;
 
@@ -441,10 +723,12 @@ int editReceiptInput(int * amount, int* price, char* buffer)
 }
 
 // Birac za broj
+
 int getNumChoice()
 {
 	char buffer[MAX_BUFFER] = { 0 };
 	int choice = 0;
+	
 	fgets(buffer, MAX_BUFFER, stdin);
 	while (sscanf(buffer, "%d", &choice) != 1)
 	{
@@ -678,7 +962,7 @@ int printAllReceipts(PosRe head)
 }
 
 // Ponovno ucitaje file da bi ga mogao sortirati po novom
-int fileSortReload(PosRe head, int sortReceipt, int sortArticle)
+int fileSortReload(PosRe head, int sortReceipt, int sortArticle, int* totalPrice)
 {
 	if (head == NULL) return ARG_ERR;
 	int status = 0;
@@ -706,7 +990,7 @@ int fileSortReload(PosRe head, int sortReceipt, int sortArticle)
 		nextReceipt = currReceipt->next;
 		currReceipt->next = NULL;
 
-		if ((status = insertRecipe(head, currReceipt, sortReceipt)) < 0) return status;
+		if ((status = insertRecipe(head, currReceipt, sortReceipt, totalPrice)) < 0) return status;
 		
 		currReceipt = nextReceipt;
 
@@ -768,7 +1052,11 @@ PosRe makeReceipt(char* dateBuffer, int index, PosArt** articleIndex)
 	PosRe receipt = makeHeadReceipt();
 	PosArt* tempBuffer = (PosArt*)realloc(*articleIndex, sizeof(PosArt) * index);
 
-	if (tempBuffer == NULL) return NULL;
+	if (tempBuffer == NULL)
+	{
+		free(tempDate);
+		return NULL;
+	};
 	
 	*articleIndex = tempBuffer;
 
@@ -821,13 +1109,47 @@ int insertElementArticle(PosArt rec1, PosArt rec2)
 }
 
 // Sortira racune prema datumu
-int insertRecipe(PosRe head, PosRe inserted, int sortReceipt)
+int insertRecipe(PosRe head, PosRe inserted, int sortReceipt, int* totalPrice)
 {
-	if (head == NULL || inserted == NULL) return ARG_ERR;
-
 	PosRe curr = head;
-	while (curr->next != NULL && (sortReceipt * strcmp(curr->next->date, inserted->date)) < 0) curr = curr->next;
 
+	if (head == NULL || inserted == NULL) return ARG_ERR;
+	
+	
+	if (sortReceipt == 3 || sortReceipt == 4)
+	{
+		int total = 0;
+		PosArt currArt = inserted->articles->next;
+		while(currArt != NULL)
+		{
+			total += (currArt->amount * currArt->price);
+			currArt = currArt->next;
+		}
+
+		if (sortReceipt == 3)
+		{
+			int i = 0;
+			while (curr->next != NULL && (totalPrice[i] < total))
+			{
+				curr = curr->next;
+				i++;
+			}
+		}
+		else if (sortReceipt == 4)
+		{
+			int i = 0;
+			while (curr->next != NULL && (totalPrice[i] > total))
+			{
+				curr = curr->next;
+				i++;
+			}
+		}
+	}
+
+	else
+	{
+		while (curr->next != NULL && (sortReceipt * strcmp(curr->next->date, inserted->date)) < 0) curr = curr->next;
+	}
 	int status = 0;
 	if ((status = insertElementReceipt(curr, inserted)) < 0) return status;
 
@@ -842,7 +1164,7 @@ int insertArticle(PosArt head, PosArt article, int sortArticles)
 
 	int status = 0;
 	PosArt curr = head;
-
+	// 3 i 4 - Pojedinacne cijene
 	if (sortArticles == 3) 
 	{
 		while (curr->next != NULL && (curr->next->price < article->price)) curr = curr->next;
@@ -850,6 +1172,15 @@ int insertArticle(PosArt head, PosArt article, int sortArticles)
 	else if (sortArticles == 4)
 	{
 		while (curr->next != NULL && (curr->next->price > article->price)) curr = curr->next;
+	}
+	// 5 i 6 - kolicina
+	else if (sortArticles == 5)
+	{
+		while (curr->next != NULL && (curr->next->amount < article->amount)) curr = curr->next;
+	}
+	else if (sortArticles == 6)
+	{
+		while (curr->next != NULL && (curr->next->amount > article->amount)) curr = curr->next;
 	}
 
 	else 
@@ -892,7 +1223,7 @@ int readReceipt(char* filename, PosRe head, PosArt** articleIndex, int index)
 		return callError(MEM_ALLOC_ERR, "readReceipt");
 	}
 
-	if ((status = insertRecipe(head, receipt, sortReceipt)) < 0)
+	if ((status = insertRecipe(head, receipt, sortReceipt, NULL)) < 0)
 	{
 		freeReceipt(receipt);
 		fclose(file);
