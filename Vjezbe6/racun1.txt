@@ -1,2 +1,3 @@
 2026-11-15
-Jagoda 3 10
+Jagodaidu 15 1000
+Mirko 1 1000000

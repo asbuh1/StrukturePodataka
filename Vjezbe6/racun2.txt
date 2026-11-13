@@ -1,7 +1,5 @@
-2026-11-11
+2026-11-07
 Ananas 2 5
-Zebra 1 10
+Baba 1 100
 Crocket 2 5
-Jagoda 3 10
-Jagoda 4 25
-Jagoda 5 600
+Zebra 51 10
