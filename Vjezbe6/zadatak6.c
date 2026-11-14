@@ -136,7 +136,7 @@ int runInit(char* masterFile)
 // UI meni
 int outerMenu(PosRe head, PosRe** indexer, int length, int** totalPrice, int** totalArticles, int* sortArticles, int* sortReceipts)
 {
-	char* menuList[] = { "Uredi", "Pretrazi", "Ispisi Sve", "Postavke Filtriranja" };
+	char* menuList[] = { "Uredi", "Pretrazi", "Ispisi Sve", "Postavke Sortiranja" };
 	int size = (int)sizeof(menuList) / (int)sizeof(menuList[0]);;
 
 	printMenu(menuList, size);
@@ -252,20 +252,20 @@ int filterSettings(PosRe head, int* articleSort, int* receiptSort, int** totalPr
 	char* menuReceipt[] = { "Datum", "Cijena" };
 	int sizeMenuReceipt = (int)sizeof(menuReceipt) / (int)sizeof(menuReceipt[0]);
 
-	printf("Postavke Filtriranja");
+	printf("Postavke Sortiranja");
 	printMenu(menu, sizeMain);
 	int choice = menuChoice(sizeMain), lowerChoice = 0, lowestChoice = 0, status = 0;
 	switch (choice)
 	{
 	case 1:
-		printf("\nMoguce filtriranje Po");
+		printf("\nMoguce Sortiranja Po");
 		printMenu(menuReceipt, sizeMenuReceipt);
 		lowerChoice = menuChoice(sizeMenuReceipt);
 
 		switch (lowerChoice)
 		{
 		case 1:
-			printf("Filtriranje po Datumu:");
+			printf("Sortiranje po Datumu:");
 			printMenu(menuAscDesc, sizeAscDesc);
 
 			lowestChoice = menuChoice(sizeAscDesc);
@@ -285,7 +285,7 @@ int filterSettings(PosRe head, int* articleSort, int* receiptSort, int** totalPr
 			break;
 
 		case 2:
-			printf("Filtriranje po cijeni:");
+			printf("Sortiranje po cijeni:");
 			printMenu(menuAscDesc, sizeAscDesc);
 			lowestChoice = menuChoice(sizeAscDesc);
 
@@ -307,13 +307,13 @@ int filterSettings(PosRe head, int* articleSort, int* receiptSort, int** totalPr
 		}
 		break;
 	case 2:
-		printf("\nMoguce filtriranje Po\n");
+		printf("\nMoguce Sortiranje Po\n");
 		printMenu(menuArticle, sizeMenuArticle);
 		lowerChoice = menuChoice(sizeMenuArticle);
 		switch (lowerChoice)
 		{
 		case 1:
-			printf("Filtriranje po nazivu:");
+			printf("Sortiranje po nazivu:");
 			printMenu(menuAscDesc, sizeAscDesc);
 
 			lowestChoice = menuChoice(sizeAscDesc);
@@ -333,7 +333,7 @@ int filterSettings(PosRe head, int* articleSort, int* receiptSort, int** totalPr
 			}
 			break;
 		case 2:
-			printf("Filtriranje po kolicini:");
+			printf("Sortiranje po kolicini:");
 			printMenu(menuAscDesc, sizeAscDesc);
 			lowestChoice = menuChoice(sizeAscDesc);
 
@@ -352,7 +352,7 @@ int filterSettings(PosRe head, int* articleSort, int* receiptSort, int** totalPr
 			}
 			break;
 		case 3:
-			printf("Filtriranje po pojedinacnoj cijeni:");
+			printf("Sortiranje po pojedinacnoj cijeni:");
 			printMenu(menuAscDesc, sizeAscDesc);
 			lowestChoice = menuChoice(sizeAscDesc);
 
